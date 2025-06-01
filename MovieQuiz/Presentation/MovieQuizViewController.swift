@@ -2,22 +2,17 @@ import UIKit
 
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     // MARK: - Lifecycle
+    @IBOutlet private var imageView: UIImageView!
+    @IBOutlet private var textLabel: UILabel!
+    @IBOutlet private var counterLabel: UILabel!
+    
     private var currentQuestionIndex = 0
     private var correctAnswers = 0
-    
     private let questionsAmount: Int = 10
     private var questionFactory: QuestionFactoryProtocol?
     private var currentQuestion: QuizQuestion?
     private var alertPresenter: AlertPresenter?
     private let statisticService: StatisticServiceProtocol = StatisticServiceImplementation()
-
-    
-    @IBOutlet private var imageView: UIImageView!
-    
-    @IBOutlet private var textLabel: UILabel!
-    
-    @IBOutlet private var counterLabel: UILabel!
-    
     
     @IBAction func yesButton(_ sender: UIButton) {
         guard let currentQuestion = currentQuestion else{
@@ -27,7 +22,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         showAnswerResult(isCorrect: theAnswerIsCorrect == currentQuestion.correctAnswer)
     }
     
-    @IBAction func NoButton(_ sender: UIButton) {
+    @IBAction func noButton(_ sender: UIButton) {
         guard let currentQuestion = currentQuestion else{
             return
         }
@@ -76,7 +71,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             question: model.text,
             questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)")
         return questionStep
-        
     }
     
     private func show(quiz step: QuizStepViewModel) {
@@ -111,22 +105,21 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             self?.correctAnswers = 0
             self?.questionFactory?.requestNextQuestion()
         }
-
         alertPresenter?.show(alertModel: alertModel)
     }
     
     
     override func viewDidLoad() {
         super.viewDidLoad()
-    
+        
         alertPresenter = AlertPresenter(viewController: self)
-
+        
         let questionFactory = QuestionFactory()
         questionFactory.delegate = self
         self.questionFactory = questionFactory
         
         self.questionFactory?.requestNextQuestion()
-        }
+    }
     
     
     // MARK: - QuestionFactoryDelegate
@@ -143,8 +136,6 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             self?.show(quiz: viewModel)
         }
     }
-    
-    
 }
     
 
