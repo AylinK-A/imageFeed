@@ -75,7 +75,6 @@
                                                     </userDefinedRuntimeAttribute>
                                                 </userDefinedRuntimeAttributes>
                                                 <connections>
-                                                    <action selector="NoButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="PlZ-tK-cOD"/>
                                                     <action selector="noButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="chv-t3-bKO"/>
                                                 </connections>
                                             </button>
@@ -104,17 +103,25 @@
                                     </stackView>
                                 </subviews>
                             </stackView>
+                            <activityIndicatorView opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" style="medium" translatesAutoresizingMaskIntoConstraints="NO" id="1RK-Dd-Ffg">
+                                <rect key="frame" x="197" y="438" width="20" height="20"/>
+                            </activityIndicatorView>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="6Tk-OE-BBY"/>
                         <color key="backgroundColor" name="YP Black"/>
                         <constraints>
+                            <constraint firstItem="1RK-Dd-Ffg" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="Rsp-cO-1Zg"/>
+                            <constraint firstItem="1RK-Dd-Ffg" firstAttribute="centerY" secondItem="8bC-Xf-vdC" secondAttribute="centerY" id="Tn0-ds-L39"/>
+                            <constraint firstItem="1RK-Dd-Ffg" firstAttribute="centerX" secondItem="8bC-Xf-vdC" secondAttribute="centerX" id="bal-GW-uEl"/>
                             <constraint firstItem="Wdo-hr-UmN" firstAttribute="top" secondItem="6Tk-OE-BBY" secondAttribute="top" constant="10" id="e8I-6A-SAz"/>
                             <constraint firstItem="6Tk-OE-BBY" firstAttribute="trailing" secondItem="Wdo-hr-UmN" secondAttribute="trailing" constant="20" id="nkj-Jn-edc"/>
                             <constraint firstItem="Wdo-hr-UmN" firstAttribute="leading" secondItem="6Tk-OE-BBY" secondAttribute="leading" constant="20" id="nmn-fa-Wi0"/>
+                            <constraint firstItem="1RK-Dd-Ffg" firstAttribute="centerY" secondItem="8bC-Xf-vdC" secondAttribute="centerY" id="q0U-fg-Kfp"/>
                             <constraint firstItem="6Tk-OE-BBY" firstAttribute="bottom" secondItem="SC6-uz-Bap" secondAttribute="bottom" id="sVx-ie-JdA"/>
                         </constraints>
                     </view>
                     <connections>
+                        <outlet property="activityIndicator" destination="1RK-Dd-Ffg" id="Ihq-c7-KjN"/>
                         <outlet property="counterLabel" destination="Zoh-qm-Hxs" id="lCb-ST-Q3H"/>
                         <outlet property="imageView" destination="eiZ-IE-dNl" id="7dJ-uN-vA0"/>
                         <outlet property="textLabel" destination="j1j-Us-1uV" id="xlX-J5-TbT"/>
