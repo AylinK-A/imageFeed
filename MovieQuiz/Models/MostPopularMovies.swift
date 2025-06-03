@@ -4,7 +4,7 @@
 //
 //  Created by Айлин Кызылай on 01.06.2025.
 import Foundation
-struct MostPopularMovies: Codable {
+struct MostPopularMovies: Decodable {
     let errorMessage: String
     let items: [MostPopularMovie]
 }

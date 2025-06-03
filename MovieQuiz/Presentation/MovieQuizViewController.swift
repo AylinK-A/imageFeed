@@ -44,13 +44,19 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
     private func showNetworkError(message: String) {
         hideLoadingIndicator()
+        var message = message
+
+        if let urlError = message.lowercased() as String?,
+               urlError.contains("offline") || urlError.contains("not connected to the internet") {
+               message = "Похоже, нет подключения к интернету. Проверьте сеть и попробуйте снова."
+            }
         let model = AlertModel(title: "Ошибка",
                                    message: message,
                                    buttonText: "Попробовать еще раз") { [weak self] in
                 guard let self = self else { return }
                 self.currentQuestionIndex = 0
                 self.correctAnswers = 0
-                self.questionFactory?.requestNextQuestion()
+                self.questionFactory?.loadData()
             }
             alertPresenter?.show(alertModel: model)
     }
@@ -73,6 +79,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
     private func showNextQuestionOrResults() {
+        currentQuestion = nil
         if currentQuestionIndex == questionsAmount - 1 {
             statisticService.store(correct: correctAnswers, total: questionsAmount)
             let text = "Ваш результат: \(correctAnswers)/\(questionsAmount)"
@@ -88,7 +95,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        return QuizStepViewModel(
+        QuizStepViewModel(
             image: UIImage(data: model.image) ?? UIImage(),
             question: model.text,
             questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)")
@@ -158,10 +165,24 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         questionFactory?.requestNextQuestion()
     }
 
+    
     func didFailToLoadData(with error: Error) {
-        activityIndicator.isHidden = true
-        questionFactory?.requestNextQuestion()
+        var message = "Ошибка загрузки: \(error.localizedDescription)"
+
+        if let urlError = error as? URLError {
+            switch urlError.code {
+            case .notConnectedToInternet:
+                message = "Нет подключения к интернету. Проверьте сеть и попробуйте снова."
+            case .timedOut:
+                message = "Превышено время ожидания. Попробуйте позже."
+            default:
+                break
+            }
+        }
+
+        showNetworkError(message: message)
     }
+
 }
     
 
