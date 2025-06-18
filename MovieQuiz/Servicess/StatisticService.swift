@@ -1,6 +1,5 @@
 import Foundation
 
-// Расширяем при объявлении
 final class StatisticServiceImplementation: StatisticServiceProtocol {
     
     private let storage: UserDefaults = .standard
@@ -14,7 +13,6 @@ final class StatisticServiceImplementation: StatisticServiceProtocol {
         case totalCorrect
         case totalQuestions
         }
-    
     
     var gamesCount: Int{
         get{
