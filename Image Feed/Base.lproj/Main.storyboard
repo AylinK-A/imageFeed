@@ -69,9 +69,9 @@
                                         </tableViewCellContentView>
                                         <color key="backgroundColor" red="0.1019607843" green="0.1058823529" blue="0.1333333333" alpha="0.0" colorSpace="custom" customColorSpace="sRGB"/>
                                         <connections>
-                                            <outlet property="cellImage" destination="UHT-CC-7rY" id="m9i-Vu-M30"/>
-                                            <outlet property="dateLabel" destination="zZ7-qv-kLf" id="v4s-uC-ojU"/>
-                                            <outlet property="likeButton" destination="sdE-8c-JJO" id="qI9-Lz-Dgp"/>
+                                            <outlet property="cellImage" destination="UHT-CC-7rY" id="mb1-1t-3UH"/>
+                                            <outlet property="dateLabel" destination="zZ7-qv-kLf" id="rD0-eL-ePj"/>
+                                            <outlet property="likeButton" destination="sdE-8c-JJO" id="yqR-RB-ieS"/>
                                         </connections>
                                     </tableViewCell>
                                 </prototypes>
