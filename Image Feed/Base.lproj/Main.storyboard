@@ -187,8 +187,8 @@
                     </view>
                     <navigationItem key="navigationItem" id="mNm-Tb-RYy"/>
                     <connections>
-                        <outlet property="ScrollView" destination="gKH-hb-2MZ" id="w3z-8u-KgL"/>
                         <outlet property="imageView" destination="t8s-5l-ZaH" id="oZv-1k-s8z"/>
+                        <outlet property="scrollView" destination="gKH-hb-2MZ" id="qpX-Rj-LDE"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="LW2-RZ-mVg" userLabel="First Responder" customClass="UIResponder" sceneMemberID="firstResponder"/>

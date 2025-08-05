@@ -72,10 +72,12 @@ final class ProfileViewController: UIViewController {
             // Login Label
             loginLabel.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
             loginLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 8),
+            loginLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             
             // Description Label
             descriptionLabel.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
             descriptionLabel.topAnchor.constraint(equalTo: loginLabel.bottomAnchor, constant: 8),
+            descriptionLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             
             // exitButton
             exitButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
@@ -83,8 +85,7 @@ final class ProfileViewController: UIViewController {
         ])
     }
     
-    
-    
+
     @objc
     private func didTapButton() {
         
