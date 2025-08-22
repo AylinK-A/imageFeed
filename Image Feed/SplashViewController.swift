@@ -1,24 +1,38 @@
-//
-//  SplashViewController.swift
-//  Image Feed
-//
-//  Created by Айлин Кызылай on 19.08.2025.
-//
-import Foundation
 import UIKit
 
 final class SplashViewController: UIViewController {
     private let showAuthenticationScreenSegueIdentifier = "ShowAuthenticationScreen"
-    private let storage = OAuth2TokenStorage()
+
+    private let storage = OAuth2Service.OAuth2TokenStorage()
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        
+
         if storage.token != nil {
-            
+            switchToTabBarController()
         } else {
             performSegue(withIdentifier: showAuthenticationScreenSegueIdentifier, sender: nil)
         }
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        setNeedsStatusBarAppearanceUpdate()
+    }
+
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        .lightContent
+    }
+
+    private func switchToTabBarController() {
+        guard let window = UIApplication.shared.windows.first else {
+            assertionFailure("Invalid window configuration")
+            return
+        }
+        
+        let tabBarController = UIStoryboard(name: "Main", bundle: .main)
+            .instantiateViewController(withIdentifier: "TabBarViewController")
+        window.rootViewController = tabBarController
     }
 }
 
@@ -27,12 +41,11 @@ extension SplashViewController {
         if segue.identifier == showAuthenticationScreenSegueIdentifier {
             guard
                 let navigationController = segue.destination as? UINavigationController,
-                let viewController = navigationController.viewControllers.first as? AuthViewController
+                let viewController = navigationController.viewControllers[0] as? AuthViewController
             else {
                 assertionFailure("Failed to prepare for \(showAuthenticationScreenSegueIdentifier)")
                 return
             }
-            
             viewController.delegate = self
         } else {
             super.prepare(for: segue, sender: sender)
@@ -42,22 +55,9 @@ extension SplashViewController {
 
 extension SplashViewController: AuthViewControllerDelegate {
     func didAuthenticate(_ vc: AuthViewController) {
-        vc.dismiss(animated: true) { [weak self] in
-            self?.switchToTabBarController()
-        }
-    }
-
-    private func switchToTabBarController() {
-        guard let window = UIApplication.shared.windows.first else {
-            assertionFailure("Invalid window configuration")
-            return
-        }
-
-        let tabBarController = UIStoryboard(name: "Main", bundle: .main)
-            .instantiateViewController(withIdentifier: "TabBarViewController")
-
-        window.rootViewController = tabBarController
+        vc.dismiss(animated: true)
+        
+        switchToTabBarController()
     }
 }
-
 

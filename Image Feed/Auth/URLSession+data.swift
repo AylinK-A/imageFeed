@@ -1,9 +1,3 @@
-//
-//  URLSession+data.swift
-//  Image Feed
-//
-//  Created by Айлин Кызылай on 17.08.2025.
-//
 import Foundation
 
 enum NetworkError: Error {
@@ -12,6 +6,7 @@ enum NetworkError: Error {
     case urlSessionError
     case invalidRequest
     case decodingError(Error)
+    case networkFailure(Error)
 }
 
 extension URLSession {
