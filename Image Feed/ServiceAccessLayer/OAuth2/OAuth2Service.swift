@@ -5,6 +5,8 @@ enum AuthServiceError: Error {
 }
 
 final class OAuth2Service {
+    // по Sprint 11 устранены гонки при получении токена (отмена запроса + блокировка UI)
+    
     static let shared = OAuth2Service()
 
     private let dataStorage = OAuth2TokenStorage.shared

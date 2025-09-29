@@ -1,3 +1,4 @@
+// по Sprint 11: добавлен класс для синхронизации ProgressHUD с блокировкой UI
 import UIKit
 import ProgressHUD
 

@@ -22,6 +22,7 @@ struct ProfileResult: Codable {
 }
 
 final class ProfileService {
+    //по Sprint 11: реализован запрос профиля (GET /me)
     static let shared = ProfileService()
     private init() {}
 

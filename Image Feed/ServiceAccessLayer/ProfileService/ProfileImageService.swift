@@ -21,6 +21,7 @@ struct UserResult: Codable {
 }
 
 final class ProfileImageService {
+    //по Sprint 11: реализован запрос аватарки пользователя (GET /users/:username)
     static let shared = ProfileImageService()
     private init() {}
 

@@ -1,3 +1,4 @@
+//по Sprint 11 был удалён storyboard, rootViewController создаётся из кода (SplashViewController)
 import UIKit
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {

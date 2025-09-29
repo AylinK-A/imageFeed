@@ -1,3 +1,4 @@
+//по Sprint 11 добавлен TabBarController с настройкой дочерних контроллеров
 import UIKit
 
 final class TabBarController: UITabBarController {

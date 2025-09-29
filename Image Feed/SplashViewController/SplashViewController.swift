@@ -1,6 +1,7 @@
 import UIKit
 
 final class SplashViewController: UIViewController {
+    //по Sprint 11 получение профиля и аватарки перенесено в SplashViewController
     private let showAuthenticationScreenSegueIdentifier = "ShowAuthenticationScreen"
 
     private let profileService = ProfileService.shared
