@@ -1,182 +1,135 @@
 import UIKit
 import Kingfisher
+import SwiftKeychainWrapper
 
 final class ProfileViewController: UIViewController {
-    private var avatarImageView: UIImageView!
-    private var nameLabel: UILabel!
-    private var loginNameLabel: UILabel!
-    private var descriptionLabel: UILabel!
-
+    
+    var delegate = SplashViewController()
+    private var oauth2TokenStorage = OAuth2TokenStorage()
+    private let profileService = ProfileService.shared
+    private let profileImageService = ProfileImageService.shared
+    
+    private var nameLabel = UILabel()
+    private var loginNameLabel = UILabel()
+    private var descriptionLabel = UILabel()
+    private var profileImage = UIImage(named: "Ekat_nov")
+    private var imageView = UIImageView()
     private var profileImageServiceObserver: NSObjectProtocol?
-
-    @IBOutlet private var logoutButton: UIButton!
-
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
-        SetupUI()
-        if let profile = ProfileService.shared.profile {
-            updateProfileDetails(profile: profile)
+        profileImageServiceObserver = NotificationCenter.default.addObserver(
+            forName: ProfileImageService.didChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self else {
+                debugPrint("no self in viewDidLoad -> ProfileViewController")
+                return }
+            self.updateAvatar()
         }
-        profileImageServiceObserver = NotificationCenter.default
-            .addObserver(
-                forName: ProfileImageService.didChangeNotification,
-                object: nil,
-                queue: .main
-            ) { [weak self] _ in
-                guard let self = self else { return }
-                self.updateAvatar()
-            }
-        updateAvatar()
-    }
-
-    private func SetupUI() {
-        view.backgroundColor = UIColor(named: "YP Black")
-        setupAvatarView()
-        setupNameLabel()
-        setupDescriptionLabel()
-        setupLogoutButton()
-    }
-
-    private func setupAvatarView() {
-        let profileImage = UIImage(systemName: "person.circle.fill")?
-            .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
-            .withConfiguration(UIImage.SymbolConfiguration(pointSize: 70, weight: .regular, scale: .large))
-        avatarImageView = UIImageView(image: profileImage)
-        avatarImageView.contentMode = .scaleAspectFit
-        avatarImageView.clipsToBounds = true
-        
-        avatarImageView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(avatarImageView)
-        
-        let size: CGFloat = 70
-        
-        NSLayoutConstraint.activate([
-            avatarImageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 56),
-            avatarImageView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            
-            avatarImageView.widthAnchor.constraint(equalToConstant: size),
-            avatarImageView.heightAnchor.constraint(equalToConstant: size)
-        ])
+        view.backgroundColor = UIColor(red: 26/255.0, green: 27/255.0, blue: 34/255.0, alpha: 1)
+        profileSetup()
     }
     
-    private func setupNameLabel() {
-        nameLabel = UILabel()
-        nameLabel.text = "Имя не указано"
-        
-        nameLabel.textColor = .white
-        
-        nameLabel.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(nameLabel)
-        
-        NSLayoutConstraint.activate([
-            nameLabel.topAnchor.constraint(equalTo: avatarImageView.bottomAnchor, constant: 8),
-            nameLabel.leadingAnchor.constraint(equalTo: avatarImageView.leadingAnchor)
-        ])
-        
-        loginNameLabel = UILabel()
-        loginNameLabel.text = "@неизвестный_пользователь"
-        
-        loginNameLabel.textColor = .gray
-        
-        loginNameLabel.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(loginNameLabel)
-        
-        NSLayoutConstraint.activate([
-            loginNameLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 8),
-            loginNameLabel.leadingAnchor.constraint(equalTo: avatarImageView.leadingAnchor)
-        ])
-    }
-    
-    private func setupDescriptionLabel() {
-        descriptionLabel = UILabel()
-        descriptionLabel.text = "Профиль не заполнен"
-        
-        descriptionLabel.textColor = .white
-        
-        descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(descriptionLabel)
-        
-        NSLayoutConstraint.activate([
-            descriptionLabel.topAnchor.constraint(equalTo: loginNameLabel.bottomAnchor, constant: 8),
-            descriptionLabel.leadingAnchor.constraint(equalTo: avatarImageView.leadingAnchor)
-        ])
-    }
-    
-    private func setupLogoutButton() {
-        let logoutButton = UIButton.systemButton(
-            with: UIImage(named: "logout_button")!,
-            target: self,
-            action: #selector(didTapLogoutButton)
-        )
-        
-        logoutButton.tintColor = .red
-        logoutButton.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(logoutButton)
-        
-        NSLayoutConstraint.activate([
-            logoutButton.centerYAnchor.constraint(equalTo: avatarImageView.centerYAnchor),
-            logoutButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -36)
-        ])
-    }
-
     private func updateAvatar() {
         guard
-            let profileImageURL = ProfileImageService.shared.avatarURL,
-            let imageUrl = URL(string: profileImageURL)
-        else { return }
-
-        print("imageUrl: \(imageUrl)")
-
-        let placeholderImage = UIImage(systemName: "person.circle.fill")?
-            .withTintColor(.lightGray, renderingMode: .alwaysOriginal)
-            .withConfiguration(UIImage.SymbolConfiguration(pointSize: 70, weight: .regular, scale: .large))
-
-        let processor = RoundCornerImageProcessor(cornerRadius: 35) // Радиус для круга
-        avatarImageView.kf.indicatorType = .activity
-        avatarImageView.kf.setImage(
-            with: imageUrl,
-            placeholder: placeholderImage,
-            options: [
-                .processor(processor),
-                .scaleFactor(UIScreen.main.scale), // Учитываем масштаб экрана
-                .cacheOriginalImage, // Кэшируем оригинал
-                .forceRefresh // Игнорируем кэш, чтобы обновить
-            ]) { result in
-
-                switch result {
-                    // Успешная загрузка
-                case .success(let value):
-                    // Картинка
-                    print(value.image)
-
-                    // Откуда картинка загружена:
-                    // - .none — из сети.
-                    // - .memory — из кэша оперативной памяти.
-                    // - .disk — из дискового кэша.
-                    print(value.cacheType)
-
-                    // Информация об источнике.
-                    print(value.source)
-
-                    // В случае ошибки
-                case .failure(let error):
-                    print(error)
-                }
-            }
+            let profileImageURL = profileImageService.avatarURL,
+            let url = URL(string: profileImageURL)
+        else {
+            debugPrint("No url for image in profileImageURL \(String(describing: profileImageService.avatarURL))")
+            return
+        }
+        let processor = RoundCornerImageProcessor(cornerRadius: 36, backgroundColor: .clear)
+        imageView.kf.indicatorType = .activity
+        imageView.kf.setImage(with: url,
+                              options: [
+                                .processor(processor),
+                                .cacheSerializer(FormatIndicatedCacheSerializer.png)
+                              ])
     }
     
-    private func updateProfileDetails(profile: Profile) {
-        nameLabel.text = profile.name.isEmpty
-        ? "Имя не указано"
-        : profile.name
-        loginNameLabel.text = profile.loginName.isEmpty
-        ? "@неизвестный_пользователь"
-        : profile.loginName
-        descriptionLabel.text = (profile.bio?.isEmpty ?? true)
-        ? "Профиль не заполнен"
-        : profile.bio
+    private func profileSetup() {
+        view.addSubview(imageView)
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.heightAnchor.constraint(equalToConstant: 70).isActive = true
+        imageView.widthAnchor.constraint(equalToConstant: 70).isActive = true
+        imageView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16).isActive = true
+        imageView.topAnchor.constraint(equalTo: view.topAnchor, constant: 75).isActive = true
+        
+        let arrowButton = UIButton()
+        let buttonImage = UIImage(named: "Exit")
+        arrowButton.setImage(buttonImage, for: .normal)
+        arrowButton.addTarget(self, action: #selector(logoutAction), for: .touchUpInside) // logout action
+        view.addSubview(arrowButton)
+        arrowButton.translatesAutoresizingMaskIntoConstraints = false
+        arrowButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24).isActive = true
+        arrowButton.centerYAnchor.constraint(equalTo: imageView.centerYAnchor).isActive = true
+        
+        nameLabel.text = "Екатерина Новикова"
+        nameLabel.text = ""
+        nameLabel.font = UIFont(name: "SFPro-Bold", size: 23)
+        nameLabel.textColor = UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
+        
+        view.addSubview(nameLabel)
+        nameLabel.translatesAutoresizingMaskIntoConstraints = false
+        nameLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16).isActive = true
+        nameLabel.topAnchor.constraint(equalTo: imageView.bottomAnchor, constant: 8).isActive = true
+        
+        loginNameLabel.text = "@ekaterina_nov"
+        loginNameLabel.text = ""
+        loginNameLabel.font = UIFont(name: "SF Pro", size: 13)
+        loginNameLabel.textColor = UIColor(red: 174/255.0, green: 175/255.0, blue: 180/255.0, alpha: 1.0)
+        
+        view.addSubview(loginNameLabel)
+        loginNameLabel.translatesAutoresizingMaskIntoConstraints = false
+        loginNameLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16).isActive = true
+        loginNameLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 8).isActive = true
+        
+        descriptionLabel.text = "Hello, world!"
+        descriptionLabel.text = ""
+        descriptionLabel.font = UIFont(name: "SF Pro", size: 13)
+        descriptionLabel.textColor = UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1.0)
+        
+        view.addSubview(descriptionLabel)
+        descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
+        descriptionLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16).isActive = true
+        descriptionLabel.topAnchor.constraint(equalTo: loginNameLabel.bottomAnchor, constant: 8).isActive = true
+        
+        guard let profile = profileService.profile else {return}
+        updateProfileDetails(profile: profile)
+        
+    }
+    
+    private func updateProfileDetails(profile: Profile) {        
+        nameLabel.text = (profile.name != nil) ? profile.name : "Екатерина Новикова"
+        loginNameLabel.text = (profile.loginName != nil) ? profile.loginName : "@ekaterina_nov"
+        descriptionLabel.text = (profile.bio != nil) ? profile.bio : "Hello, world!"
+        updateAvatar()
+    }
+    
+    private func checkIfTokenIsRemoved() {
+        let keyValue = "bearerToken"
+        let isSuccess: String? = KeychainWrapper.standard.string(forKey: keyValue)
+        guard isSuccess != nil else {
+            debugPrint("token value is nil: isSuccess -> ProfileViewController")
+            return
+        }
     }
 
-    @IBAction private func didTapLogoutButton() {
+    @objc private func logoutAction() {
+        oauth2TokenStorage.token = ""
+        let _: Bool = KeychainWrapper.standard.removeObject(forKey: "bearerToken")
+        self.dismiss(animated: true)
+        guard let window = UIApplication.shared.windows.first else {
+            assertionFailure("Invalid windows configuration")
+            return
+        }
+        let splashViewController = SplashViewController()
+        splashViewController.modalTransitionStyle = .crossDissolve
+        splashViewController.modalPresentationStyle = .fullScreen
+        window.rootViewController = splashViewController
     }
+    
 }

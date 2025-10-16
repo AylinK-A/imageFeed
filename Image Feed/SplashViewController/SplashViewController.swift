@@ -1,95 +1,112 @@
 import UIKit
+import SwiftKeychainWrapper
 
 final class SplashViewController: UIViewController {
-    private let showAuthenticationScreenSegueIdentifier = "ShowAuthenticationScreen"
-
+    private let oauth2TokenStorage = OAuth2TokenStorage()
     private let profileService = ProfileService.shared
-    private let storage = OAuth2TokenStorage.shared
+    private let profileImageService = ProfileImageService.shared
 
-    private var imageView: UIImageView!
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        setupSplashVC()
+    }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
-        setupImageView()
-
-        if let token = storage.token {
-            switchToTabBarController()
-            fetchProfile(token: token)
+        if let token = oauth2TokenStorage.token, !token.isEmpty {
+            fetchProfileAndProceed(with: token)
         } else {
-            presentAuthViewController()
+            switchToAuthViewController()
         }
     }
 
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        setNeedsStatusBarAppearanceUpdate()
-    }
+    // MARK: - UI setup
 
-    override var preferredStatusBarStyle: UIStatusBarStyle {
-        .lightContent
-    }
-
-    private func setupImageView() {
-        let imageSplashScreenLogo = UIImage(named: "splashScreenLogo")
-
-        imageView = UIImageView(image: imageSplashScreenLogo)
-
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(imageView)
+    private func setupSplashVC() {
+        view.backgroundColor = .ypBlack
+        let logoImageView = UIImageView(image: UIImage(named: "Logo_of_Unsplash"))
+        logoImageView.backgroundColor = .clear
+        logoImageView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(logoImageView)
 
         NSLayoutConstraint.activate([
-            imageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            imageView.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+            logoImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            logoImageView.centerYAnchor.constraint(equalTo: view.centerYAnchor),
+            logoImageView.widthAnchor.constraint(equalToConstant: 60),
+            logoImageView.heightAnchor.constraint(equalToConstant: 60)
         ])
     }
 
-    private func presentAuthViewController() {
-        let storyboard = UIStoryboard(name: "Main", bundle: .main)
-        guard let authViewController = storyboard.instantiateViewController(withIdentifier: "AuthViewController") as? AuthViewController else {
-            assertionFailure("Не удалось найти AuthViewController по идентификатору")
+    // MARK: - Navigation
+
+    private func switchToAuthViewController() {
+        guard let authVC = UIStoryboard(name: "Main", bundle: nil)
+            .instantiateViewController(withIdentifier: "AuthViewController") as? AuthViewController else {
+            assertionFailure("AuthViewController not found")
             return
         }
-        authViewController.delegate = self
-        authViewController.modalPresentationStyle = .fullScreen
-        present(authViewController, animated: true)
+        authVC.makeDelegate(self)
+        authVC.modalPresentationStyle = .fullScreen
+        authVC.modalTransitionStyle = .crossDissolve
+        present(authVC, animated: true)
     }
 
-    private func switchToTabBarController() {
+    private func switchToTabBarViewController() {
         guard let window = UIApplication.shared.windows.first else {
             assertionFailure("Invalid window configuration")
             return
         }
-        
-        let tabBarController = UIStoryboard(name: "Main", bundle: .main)
-            .instantiateViewController(withIdentifier: "TabBarViewController")
+
+        let tabBarController = TabBarController()
+        tabBarController.awakeFromNib()
         window.rootViewController = tabBarController
     }
 
-    private func fetchProfile(token: String) {
+    // MARK: - Profile loading
+
+    private func fetchProfileAndProceed(with token: String) {
         UIBlockingProgressHUD.show()
         profileService.fetchProfile(token) { [weak self] result in
+            guard let self = self else { return }
             UIBlockingProgressHUD.dismiss()
 
-            guard let self = self else { return }
-
             switch result {
-            case let .success(profile):
-                ProfileImageService.shared.fetchProfileImageURL(username: profile.username) { _ in }
-                self.switchToTabBarController()
+            case .success:
+                guard let username = self.profileService.profile?.username else {
+                    debugPrint("[SplashViewController]: profile.username is nil")
+                    self.switchToTabBarViewController()
+                    return
+                }
 
-            case let .failure(error):
-                print(error)
-                break
+                // Запускаем загрузку аватарки без ожидания результата
+                    self.profileImageService.fetchProfileImageURL(username: username) { _ in }
+
+                    // И сразу переходим в приложение
+                    DispatchQueue.main.async {
+                        self.switchToTabBarViewController()
+                    }
+
+            case .failure(let error):
+                debugPrint("[SplashViewController.fetchProfile]: \(error.localizedDescription)")
+                self.switchToAuthViewController()
             }
         }
     }
 }
 
+// MARK: - AuthViewControllerDelegate
+
 extension SplashViewController: AuthViewControllerDelegate {
-    func didAuthenticate(_ vc: AuthViewController) {
-        vc.dismiss(animated: true)
-        
-        switchToTabBarController()
+    func didAuthenticate(_ vc: AuthViewController, success: Bool) {
+        vc.dismiss(animated: true) { [weak self] in
+            guard let self = self else { return }
+            if success, let token = self.oauth2TokenStorage.token {
+                self.fetchProfileAndProceed(with: token)
+            } else {
+                self.switchToAuthViewController()
+            }
+        }
     }
 }
+
