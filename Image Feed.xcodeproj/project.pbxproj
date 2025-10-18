@@ -34,6 +34,8 @@
 		FE1FBDF02E9109E800DBDA12 /* AuthViewControllerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE1FBDEF2E9109E800DBDA12 /* AuthViewControllerDelegate.swift */; };
 		FE1FBDF22E9109FA00DBDA12 /* WebViewViewControllerDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE1FBDF12E9109FA00DBDA12 /* WebViewViewControllerDelegate.swift */; };
 		FE1FBDF52E910B4E00DBDA12 /* UIColor+App.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE1FBDF42E910B3D00DBDA12 /* UIColor+App.swift */; };
+		FE84D2D22EA397A30050B6A6 /* ImageListService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84D2D12EA397890050B6A6 /* ImageListService.swift */; };
+		FE84D2D42EA39DEB0050B6A6 /* ImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE84D2D32EA39DE90050B6A6 /* ImageLoader.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,6 +65,8 @@
 		FE1FBDEF2E9109E800DBDA12 /* AuthViewControllerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewControllerDelegate.swift; sourceTree = "<group>"; };
 		FE1FBDF12E9109FA00DBDA12 /* WebViewViewControllerDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewViewControllerDelegate.swift; sourceTree = "<group>"; };
 		FE1FBDF42E910B3D00DBDA12 /* UIColor+App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UIColor+App.swift"; sourceTree = "<group>"; };
+		FE84D2D12EA397890050B6A6 /* ImageListService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageListService.swift; sourceTree = "<group>"; };
+		FE84D2D32EA39DE90050B6A6 /* ImageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageLoader.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -142,6 +146,8 @@
 		7D9CFA5A28DDF66900D971A7 /* ImagesList */ = {
 			isa = PBXGroup;
 			children = (
+				FE84D2D32EA39DE90050B6A6 /* ImageLoader.swift */,
+				FE84D2D12EA397890050B6A6 /* ImageListService.swift */,
 				7D3DFB1328DDF696005A13F3 /* ImagesListCell.swift */,
 				7D3DFB1428DDF696005A13F3 /* ImagesListViewController.swift */,
 			);
@@ -307,6 +313,7 @@
 			files = (
 				7D9CFA4328DDEE7F00D971A7 /* AppDelegate.swift in Sources */,
 				619803982B2A3E26009E5440 /* URLSession+data.swift in Sources */,
+				FE84D2D22EA397A30050B6A6 /* ImageListService.swift in Sources */,
 				7D9CFA4528DDEE7F00D971A7 /* SceneDelegate.swift in Sources */,
 				8F83109D28E459BD00BA471F /* ProfileViewController.swift in Sources */,
 				8FB291BE2902DAB100A53129 /* SplashViewController.swift in Sources */,
@@ -320,6 +327,7 @@
 				8F8310A028E4D0C300BA471F /* SingleImageViewController.swift in Sources */,
 				FE17B3542E910916008E26E8 /* ProfileImageService.swift in Sources */,
 				55063DAD28F72D48008782E1 /* WebViewViewController.swift in Sources */,
+				FE84D2D42EA39DEB0050B6A6 /* ImageLoader.swift in Sources */,
 				7D3DFB1528DDF696005A13F3 /* ImagesListCell.swift in Sources */,
 				8FB291B92902DA2100A53129 /* OAuth2Service.swift in Sources */,
 				FE1FBDF52E910B4E00DBDA12 /* UIColor+App.swift in Sources */,
