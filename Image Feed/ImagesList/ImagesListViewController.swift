@@ -4,7 +4,7 @@ final class ImagesListViewController: UIViewController {
 
     @IBOutlet private var tableView: UITableView!
 
-    private lazy var imagesService = ImageListService(authHeaderValue: "Bearer <YOUR_TOKEN>")
+    private lazy var imagesService = ImageListService()
     private var photos: [Photo] = []
 
     private let showSingleImageSegueIdentifier = "ShowSingleImage"
@@ -14,7 +14,9 @@ final class ImagesListViewController: UIViewController {
 
         tableView.dataSource = self
         tableView.delegate = self
-        tableView.rowHeight = 200
+
+        tableView.rowHeight = UITableView.automaticDimension
+        tableView.estimatedRowHeight = 300
         tableView.contentInset = UIEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
 
         NotificationCenter.default.addObserver(
@@ -24,7 +26,9 @@ final class ImagesListViewController: UIViewController {
             object: imagesService
         )
 
-        imagesService.fetchPhotosNextPage()
+        if photos.isEmpty {
+            imagesService.fetchPhotosNextPage()
+        }
     }
 
     deinit {
@@ -32,12 +36,33 @@ final class ImagesListViewController: UIViewController {
     }
 
     @objc private func handlePhotosUpdate(_ note: Notification) {
-        let oldCount = photos.count
-        photos = imagesService.photos
-        guard photos.count > oldCount else { return }
-        let inserted = (oldCount..<photos.count).map { IndexPath(row: $0, section: 0) }
-        tableView.performBatchUpdates {
-            tableView.insertRows(at: inserted, with: .automatic)
+        assert(Thread.isMainThread)
+
+        let oldCountInTable = tableView.numberOfRows(inSection: 0)
+        let newPhotos = imagesService.photos
+        let newCount = newPhotos.count
+        
+        photos = newPhotos
+
+        if newCount > oldCountInTable {
+                // добавились новые строки — вставим хвост
+                let inserted = (oldCountInTable..<newCount).map { IndexPath(row: $0, section: 0) }
+                tableView.performBatchUpdates {
+                    tableView.insertRows(at: inserted, with: .automatic)
+                }
+                return
+            }
+        if let idx = note.userInfo?["changedIndex"] as? Int {
+                let ip = IndexPath(row: idx, section: 0)
+                // обновляем конкретную ячейку (configure поставит правильную иконку)
+                tableView.reloadRows(at: [ip], with: .none)
+            } else {
+                // на всякий случай: если уведомление без индекса
+                if let visible = tableView.indexPathsForVisibleRows, !visible.isEmpty {
+                    tableView.reloadRows(at: visible, with: .none)
+                } else {
+                    tableView.reloadData()
+            }
         }
     }
 
@@ -46,22 +71,17 @@ final class ImagesListViewController: UIViewController {
             guard
                 let vc = segue.destination as? SingleImageViewController,
                 let indexPath = sender as? IndexPath
-            else {
-                assertionFailure("Invalid segue destination or sender")
-                return
-            }
+            else { return }
+
             let model = photos[indexPath.row]
-            // грузим полноразмер и передаём UIImage
-            ImageLoader.shared.loadImage(from: model.largeImageURL) { image in
-                guard let image else { return }
-                vc.image = image
-            }
+            vc.imageURL = URL(string: model.largeImageURL)
         } else {
             super.prepare(for: segue, sender: sender)
         }
     }
 }
 
+// MARK: - UITableViewDataSource
 extension ImagesListViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         photos.count
@@ -76,10 +96,12 @@ extension ImagesListViewController: UITableViewDataSource {
             return UITableViewCell()
         }
         cell.configure(with: photos[indexPath.row])
+        cell.delegate = self
         return cell
     }
 }
 
+// MARK: - UITableViewDelegate
 extension ImagesListViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         performSegue(withIdentifier: showSingleImageSegueIdentifier, sender: indexPath)
@@ -92,5 +114,42 @@ extension ImagesListViewController: UITableViewDelegate {
             imagesService.fetchPhotosNextPage()
         }
     }
+
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        let photo = photos[indexPath.row]
+        let tableWidth = tableView.bounds.width
+        let imageWidth = max(photo.size.width, 1)
+        let scale = tableWidth / imageWidth
+        let imageHeight = photo.size.height * scale
+        return imageHeight
+    }
 }
+
+extension ImagesListViewController: ImagesListCellDelegate {
+    func imagesListCellDidTapLike(_ cell: ImagesListCell) {
+        guard let indexPath = tableView.indexPath(for: cell) else { return }
+        let photo = photos[indexPath.row]
+
+        cell.setLikeButtonEnabled(false)
+
+        imagesService.changeLike(photoId: photo.id, isLike: !photo.isLiked) { [weak self] result in
+            guard let self else { return }
+            if let currentCell = self.tableView.cellForRow(at: indexPath) as? ImagesListCell {
+                currentCell.setLikeButtonEnabled(true)
+            }
+
+            switch result {
+            case .success:
+                break
+            case .failure:
+                let alert = UIAlertController(title: "Ошибка",
+                                              message: "Не удалось изменить лайк. Попробуйте позже.",
+                                              preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: "OK", style: .default))
+                self.present(alert, animated: true)
+            }
+        }
+    }
+}
+
 

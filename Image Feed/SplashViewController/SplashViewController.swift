@@ -79,10 +79,8 @@ final class SplashViewController: UIViewController {
                     return
                 }
 
-                // Запускаем загрузку аватарки без ожидания результата
                     self.profileImageService.fetchProfileImageURL(username: username) { _ in }
 
-                    // И сразу переходим в приложение
                     DispatchQueue.main.async {
                         self.switchToTabBarViewController()
                     }

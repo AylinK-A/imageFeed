@@ -1,8 +1,6 @@
 import Foundation
 import CoreGraphics
 
-// MARK: - DTO из сети
-
 struct UrlsResult: Decodable {
     let raw: String
     let full: String
@@ -31,8 +29,6 @@ struct PhotoResult: Decodable {
     }
 }
 
-// MARK: - Модель для UI
-
 struct Photo {
     let id: String
     let size: CGSize
@@ -57,8 +53,6 @@ extension PhotoResult {
     }
 }
 
-// MARK: - Декодер дат Unsplash
-
 private extension JSONDecoder {
     static let unsplash: JSONDecoder = {
         let d = JSONDecoder()
@@ -76,24 +70,27 @@ private extension JSONDecoder {
     }()
 }
 
-// MARK: - Сервис
-
 final class ImageListService {
 
-    static let didChangeNotification = Notification.Name("ImagesListServiceDidChange")
+    static let didChangeNotification = Notification.Name(rawValue: "ImagesListServiceDidChange")
 
     private(set) var photos: [Photo] = []
 
     private var lastLoadedPage: Int?
     private var isLoading = false
     private var task: URLSessionTask?
+    private var likeTask: URLSessionTask?
 
     private let perPage = 10
-    private let authHeaderValue: String
+    private var authHeaderValue: String {
+            if let token = OAuth2TokenStorage().token, !token.isEmpty {
+                return "Bearer \(token)"
+            } else {
+                return "Client-ID \(Constants.accessKey)"
+            }
+        }
 
-    init(authHeaderValue: String) {
-        self.authHeaderValue = authHeaderValue
-    }
+    init() {}
 
     deinit { task?.cancel() }
 
@@ -105,7 +102,6 @@ final class ImageListService {
         photos = []
     }
 
-    /// Загружает следующую страницу. Если загрузка уже идёт — просто выходим.
     func fetchPhotosNextPage() {
         guard !isLoading else { return }
 
@@ -122,7 +118,6 @@ final class ImageListService {
         request.httpMethod = "GET"
         request.setValue(authHeaderValue, forHTTPHeaderField: "Authorization")
 
-        // Важно: ваш URLSession+data/objectTask уже вызывает completion на main.
         task = URLSession.shared.objectTask(for: request) { [weak self] (result: Result<[PhotoResult], Error>) in
             guard let self else { return }
             defer {
@@ -134,7 +129,6 @@ final class ImageListService {
             case .success(let results):
                 let newPhotos = results.map { $0.toPhoto() }
 
-                // защита от дублей
                 let existingIDs = Set(self.photos.map(\.id))
                 let unique = newPhotos.filter { !existingIDs.contains($0.id) }
 
@@ -154,5 +148,62 @@ final class ImageListService {
 
         task?.resume()
     }
+    
+    func changeLike(photoId: String, isLike: Bool, _ completion: @escaping (Result<Void, Error>) -> Void) {
+        assert(Thread.isMainThread)
+
+        guard let url = URL(string: "https://api.unsplash.com/photos/\(photoId)/like") else {
+            completion(.failure(NetworkError.urlSessionError))
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = isLike ? "POST" : "DELETE"
+        request.setValue(authHeaderValue, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+        let task = URLSession.shared.data(for: request) { [weak self] result in
+            guard let self else { return }
+
+            switch result {
+            case .success:
+                DispatchQueue.main.async {
+                    if let index = self.photos.firstIndex(where: { $0.id == photoId }) {
+                        let photo = self.photos[index]
+                        let newPhoto = Photo(
+                            id: photo.id,
+                            size: photo.size,
+                            createdAt: photo.createdAt,
+                            welcomeDescription: photo.welcomeDescription,
+                            thumbImageURL: photo.thumbImageURL,
+                            largeImageURL: photo.largeImageURL,
+                            isLiked: !photo.isLiked
+                        )
+                        self.photos = self.photos.withReplaced(itemAt: index, newValue: newPhoto)
+
+                        NotificationCenter.default.post(
+                            name: Self.didChangeNotification,
+                            object: self,
+                            userInfo: ["photos": self.photos,
+                                       "changedIndex": index]
+                        )
+                    }
+                    completion(.success(()))
+                }
+            case .failure(let error):
+                DispatchQueue.main.async {
+                    completion(.failure(error))
+                }
+            }
+        }
+        task.resume()
+    }
 }
 
+extension Array {
+    func withReplaced(itemAt index: Int, newValue: Element) -> [Element] {
+        var copy = self
+        copy[index] = newValue
+        return copy
+    }
+}

@@ -1,11 +1,21 @@
 import UIKit
 
+protocol ImagesListCellDelegate: AnyObject {
+    func imagesListCellDidTapLike(_ cell: ImagesListCell)
+}
+
 final class ImagesListCell: UITableViewCell {
 
     @IBOutlet private weak var imageCellView: UIImageView!
     @IBOutlet private weak var dateCellView: UILabel!
     @IBOutlet private weak var buttonCellView: UIButton!
-
+    
+    weak var delegate: ImagesListCellDelegate?
+   
+    @IBAction func buttonSwitchLike(_ sender: Any) {
+        delegate?.imagesListCellDidTapLike(self)
+    }
+    
     static let reuseIdentifier = "ImagesListCell"
 
     private let gradientLayer = CAGradientLayer()
@@ -17,20 +27,35 @@ final class ImagesListCell: UITableViewCell {
         return f
     }()
 
+    private lazy var spinner: UIActivityIndicatorView = {
+        let v = UIActivityIndicatorView(style: .medium)
+        v.hidesWhenStopped = true
+        return v
+    }()
+    private var currentImageURL: String?
+    
+    // ⬇️ Шимиринг для ячейки
+    private var shimmerLayers: [CALayer] = []
+
     override func awakeFromNib() {
         super.awakeFromNib()
-        // Градиент — сверху прозрачный, снизу лёгкий затемнитель
         let start = UIColor(red: 26/255, green: 27/255, blue: 34/255, alpha: 0.0)
         let end   = UIColor(red: 26/255, green: 27/255, blue: 34/255, alpha: 0.2)
         gradientLayer.colors = [start.cgColor, end.cgColor]
         gradientLayer.locations = [0, 1]
         imageCellView.layer.addSublayer(gradientLayer)
         selectionStyle = .none
+
+        imageCellView.addSubview(spinner)
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            spinner.centerXAnchor.constraint(equalTo: imageCellView.centerXAnchor),
+            spinner.centerYAnchor.constraint(equalTo: imageCellView.centerYAnchor)
+        ])
     }
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        // Подгоняем градиент под низ изображения (30pt высотой)
         let height: CGFloat = 30
         gradientLayer.frame = CGRect(
             x: 0,
@@ -42,30 +67,59 @@ final class ImagesListCell: UITableViewCell {
 
     override func prepareForReuse() {
         super.prepareForReuse()
+        currentImageURL = nil
         imageCellView.image = nil
         dateCellView.text = nil
-        // like оставим дефолтным; при configure обновится
+        spinner.stopAnimating()
+        buttonCellView.isEnabled = true
+        
+        // Снимаем анимации шимиринга
+        ShimmerHelper.removeAll(&shimmerLayers)
     }
 
-    /// Новый метод конфигурации: принимает модель Photo
     func configure(with photo: Photo) {
-        // 1) Дата
         if let created = photo.createdAt {
             dateCellView.text = dateFormatter.string(from: created)
         } else {
             dateCellView.text = "—"
         }
 
-        // 2) Иконка лайка
         let likeImage = photo.isLiked
             ? UIImage(named: "Active")
             : UIImage(named: "No Active")
         buttonCellView.setImage(likeImage, for: .normal)
 
-        // 3) Превью (thumb) — грузим и кэшируем
+        imageCellView.image = UIImage(named: "Stub")
+        spinner.startAnimating()
+
+        // ⬇️ Шимиринг на картинке (радиус 12 — аккуратные скругления)
+        ShimmerHelper.removeAll(&shimmerLayers)
+        let shimmer = ShimmerHelper.add(to: imageCellView, cornerRadius: 12)
+        shimmerLayers.append(shimmer)
+
+        currentImageURL = photo.thumbImageURL
+        let expectedURL = currentImageURL
+
         ImageLoader.shared.loadImage(from: photo.thumbImageURL) { [weak self] image in
-            self?.imageCellView.image = image
+            guard let self = self else { return }
+            guard self.currentImageURL == expectedURL else { return }
+
+            self.imageCellView.image = image ?? UIImage(named: "Stub")
+            self.spinner.stopAnimating()
+            
+            // ❗️контент готов — убираем шимиринг
+            ShimmerHelper.removeAll(&self.shimmerLayers)
+
+            // Если высота изменилась — перерисуем строку
+            if let table = self.superview as? UITableView,
+               let indexPath = table.indexPath(for: self) {
+                table.reloadRows(at: [indexPath], with: .automatic)
+            }
         }
+    }
+    
+    func setLikeButtonEnabled(_ enabled: Bool) {
+        buttonCellView.isEnabled = enabled
     }
 }
 
