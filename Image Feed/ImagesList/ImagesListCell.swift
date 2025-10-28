@@ -1,73 +1,125 @@
-import Foundation
 import UIKit
 
+protocol ImagesListCellDelegate: AnyObject {
+    func imagesListCellDidTapLike(_ cell: ImagesListCell)
+}
+
 final class ImagesListCell: UITableViewCell {
-    
+
     @IBOutlet private weak var imageCellView: UIImageView!
-    
     @IBOutlet private weak var dateCellView: UILabel!
-    
     @IBOutlet private weak var buttonCellView: UIButton!
     
-    static let reuseIdentifier = "ImagesListCell"
+    weak var delegate: ImagesListCellDelegate?
+   
+    @IBAction func buttonSwitchLike(_ sender: Any) {
+        delegate?.imagesListCellDidTapLike(self)
+    }
     
+    static let reuseIdentifier = "ImagesListCell"
+
+    private let gradientLayer = CAGradientLayer()
     private lazy var dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .long
-        formatter.timeStyle = .none
-        formatter.locale = Locale(identifier: "ru_RU")
-        return formatter
+        let f = DateFormatter()
+        f.dateStyle = .long
+        f.timeStyle = .none
+        f.locale = Locale(identifier: "ru_RU")
+        return f
     }()
 
+    private lazy var spinner: UIActivityIndicatorView = {
+        let v = UIActivityIndicatorView(style: .medium)
+        v.hidesWhenStopped = true
+        return v
+    }()
+    private var currentImageURL: String?
     
+    // ⬇️ Шимиринг для ячейки
+    private var shimmerLayers: [CALayer] = []
+
+    override func awakeFromNib() {
+        super.awakeFromNib()
+        let start = UIColor(red: 26/255, green: 27/255, blue: 34/255, alpha: 0.0)
+        let end   = UIColor(red: 26/255, green: 27/255, blue: 34/255, alpha: 0.2)
+        gradientLayer.colors = [start.cgColor, end.cgColor]
+        gradientLayer.locations = [0, 1]
+        imageCellView.layer.addSublayer(gradientLayer)
+        selectionStyle = .none
+
+        imageCellView.addSubview(spinner)
+        spinner.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            spinner.centerXAnchor.constraint(equalTo: imageCellView.centerXAnchor),
+            spinner.centerYAnchor.constraint(equalTo: imageCellView.centerYAnchor)
+        ])
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let height: CGFloat = 30
+        gradientLayer.frame = CGRect(
+            x: 0,
+            y: imageCellView.bounds.height - height,
+            width: imageCellView.bounds.width,
+            height: height
+        )
+    }
+
     override func prepareForReuse() {
         super.prepareForReuse()
-        if self.imageCellView.layer.sublayers?.count != nil  {
-            self.imageCellView.layer.sublayers?.removeAll()
+        currentImageURL = nil
+        imageCellView.image = nil
+        dateCellView.text = nil
+        spinner.stopAnimating()
+        buttonCellView.isEnabled = true
+        
+        // Снимаем анимации шимиринга
+        ShimmerHelper.removeAll(&shimmerLayers)
+    }
+
+    func configure(with photo: Photo) {
+        if let created = photo.createdAt {
+            dateCellView.text = dateFormatter.string(from: created)
+        } else {
+            dateCellView.text = "—"
+        }
+
+        let likeImage = photo.isLiked
+            ? UIImage(named: "Active")
+            : UIImage(named: "No Active")
+        buttonCellView.setImage(likeImage, for: .normal)
+
+        imageCellView.image = UIImage(named: "Stub")
+        spinner.startAnimating()
+
+        // ⬇️ Шимиринг на картинке (радиус 12 — аккуратные скругления)
+        ShimmerHelper.removeAll(&shimmerLayers)
+        let shimmer = ShimmerHelper.add(to: imageCellView, cornerRadius: 12)
+        shimmerLayers.append(shimmer)
+
+        currentImageURL = photo.thumbImageURL
+        let expectedURL = currentImageURL
+
+        ImageLoader.shared.loadImage(from: photo.thumbImageURL) { [weak self] image in
+            guard let self = self else { return }
+            guard self.currentImageURL == expectedURL else { return }
+
+            self.imageCellView.image = image ?? UIImage(named: "Stub")
+            self.spinner.stopAnimating()
+            
+            // ❗️контент готов — убираем шимиринг
+            ShimmerHelper.removeAll(&self.shimmerLayers)
+
+            // Если высота изменилась — перерисуем строку
+            if let table = self.superview as? UITableView,
+               let indexPath = table.indexPath(for: self) {
+                table.reloadRows(at: [indexPath], with: .automatic)
+            }
         }
     }
     
-    func configCell(in tableView: UITableView, for cell: ImagesListCell, with indexPath: IndexPath) {
-        let imageHeartFilled = UIImage(named: "Active")
-        let imageHeartEmpty = UIImage(named: "No Active")
-        var actualImageHeight: CGFloat = 0.0
-        cell.selectionStyle = .none
-        
-        let rowNumber = indexPath.row
-        let imageName = "\(rowNumber)"
-        if let currentImage = UIImage(named: imageName) {
-            cell.imageCellView.image = currentImage
-            let heightImage = currentImage.size.height
-            let widthImage = currentImage.size.width
-            let widthView = cell.imageCellView.frame.size.width
-            actualImageHeight = (heightImage * widthView) / widthImage
-            tableView.rowHeight = actualImageHeight
-        } else {
-            debugPrint("No such image \(indexPath.row) exists")
-            return
-        }
-
-        let gradient = CAGradientLayer()
-        let start = UIColor(red: 26/255, green: 27/255, blue: 34/255, alpha: 0.0)
-        let end = UIColor(red: 26/255, green: 27/255, blue: 34/255, alpha: 0.2)
-        gradient.colors = [start.cgColor, end.cgColor]
-        gradient.locations = [0, 0.3]
-        let y_point = tableView.rowHeight - 8
-        let gradientHeight: CGFloat = 30.0
-        gradient.frame = CGRect(x: 0, y: y_point, width: cell.imageCellView.bounds.size.width, height: -(gradientHeight))
-        cell.imageCellView.layer.addSublayer(gradient)
-        
-        let curDate: Date
-        if #available(iOS 15.0, *) {
-            curDate = Date.now
-        } else {
-            curDate = Date()
-        }
-        cell.dateCellView.text = "\(dateFormatter.string(from: curDate))"
-        
-        let isHeartFilled = rowNumber % 2 == 0
-        let heartImage = isHeartFilled ? imageHeartFilled : imageHeartEmpty
-        cell.buttonCellView.setImage(heartImage, for: .normal)
+    func setLikeButtonEnabled(_ enabled: Bool) {
+        buttonCellView.isEnabled = enabled
     }
 }
 
