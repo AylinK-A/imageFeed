@@ -1,5 +1,6 @@
 import UIKit
 import SwiftKeychainWrapper
+import WebKit
 
 final class SplashViewController: UIViewController {
     private let oauth2TokenStorage = OAuth2TokenStorage()
@@ -13,6 +14,22 @@ final class SplashViewController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
+
+        // ⬇️ Режим UI-тестов: принудительно начинаем с экрана авторизации
+        if ProcessInfo.processInfo.arguments.contains("-ResetAuth") {
+            // 1) Сносим токен
+            oauth2TokenStorage.removeAllTokensForUITests()
+
+            // 2) Чистим cookies/LocalStorage у WKWebView, чтобы Unsplash снова показал форму логина
+            WKWebsiteDataStore.default().fetchDataRecords(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes()) { records in
+                WKWebsiteDataStore.default().removeData(
+                    ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(),
+                    for: records,
+                    completionHandler: {}
+                )
+            }
+            // Дальше обычная логика — токена нет → показать экран авторизации
+        }
 
         if let token = oauth2TokenStorage.token, !token.isEmpty {
             fetchProfileAndProceed(with: token)
@@ -79,11 +96,11 @@ final class SplashViewController: UIViewController {
                     return
                 }
 
-                    self.profileImageService.fetchProfileImageURL(username: username) { _ in }
+                self.profileImageService.fetchProfileImageURL(username: username) { _ in }
 
-                    DispatchQueue.main.async {
-                        self.switchToTabBarViewController()
-                    }
+                DispatchQueue.main.async {
+                    self.switchToTabBarViewController()
+                }
 
             case .failure(let error):
                 debugPrint("[SplashViewController.fetchProfile]: \(error.localizedDescription)")

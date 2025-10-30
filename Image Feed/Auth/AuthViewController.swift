@@ -5,10 +5,15 @@ final class AuthViewController: UIViewController {
     private let ShowWebViewSegueIdentifier = "ShowWebView"
     private let oauth2Service = OAuth2Service.shared
     private let oauth2TokenStorage = OAuth2TokenStorage()
-    private let webViewViewController = WebViewViewController()
 
     weak var delegate: AuthViewControllerDelegate?
     @IBOutlet weak var enterButton: UIButton!
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        // ✅ для UI-тестов
+        enterButton.accessibilityIdentifier = "Authenticate"
+    }
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == ShowWebViewSegueIdentifier {
@@ -17,6 +22,12 @@ final class AuthViewController: UIViewController {
             }
             webVC.modalPresentationStyle = .fullScreen
             webVC.delegate = self
+
+            // Wire Presenter + Helper
+            let authHelper = AuthHelper()
+            let presenter = WebViewPresenter(authHelper: authHelper)
+            webVC.presenter = presenter
+            presenter.view = webVC
         } else {
             super.prepare(for: segue, sender: sender)
         }

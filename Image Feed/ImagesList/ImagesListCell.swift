@@ -34,7 +34,6 @@ final class ImagesListCell: UITableViewCell {
     }()
     private var currentImageURL: String?
     
-    // ⬇️ Шимиринг для ячейки
     private var shimmerLayers: [CALayer] = []
 
     override func awakeFromNib() {
@@ -52,6 +51,9 @@ final class ImagesListCell: UITableViewCell {
             spinner.centerXAnchor.constraint(equalTo: imageCellView.centerXAnchor),
             spinner.centerYAnchor.constraint(equalTo: imageCellView.centerYAnchor)
         ])
+
+        // ✅ для UI-тестов
+        buttonCellView.accessibilityIdentifier = "LikeButton"
     }
 
     override func layoutSubviews() {
@@ -72,8 +74,6 @@ final class ImagesListCell: UITableViewCell {
         dateCellView.text = nil
         spinner.stopAnimating()
         buttonCellView.isEnabled = true
-        
-        // Снимаем анимации шимиринга
         ShimmerHelper.removeAll(&shimmerLayers)
     }
 
@@ -92,7 +92,6 @@ final class ImagesListCell: UITableViewCell {
         imageCellView.image = UIImage(named: "Stub")
         spinner.startAnimating()
 
-        // ⬇️ Шимиринг на картинке (радиус 12 — аккуратные скругления)
         ShimmerHelper.removeAll(&shimmerLayers)
         let shimmer = ShimmerHelper.add(to: imageCellView, cornerRadius: 12)
         shimmerLayers.append(shimmer)
@@ -106,11 +105,8 @@ final class ImagesListCell: UITableViewCell {
 
             self.imageCellView.image = image ?? UIImage(named: "Stub")
             self.spinner.stopAnimating()
-            
-            // ❗️контент готов — убираем шимиринг
             ShimmerHelper.removeAll(&self.shimmerLayers)
 
-            // Если высота изменилась — перерисуем строку
             if let table = self.superview as? UITableView,
                let indexPath = table.indexPath(for: self) {
                 table.reloadRows(at: [indexPath], with: .automatic)
