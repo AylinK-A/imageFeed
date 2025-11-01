@@ -21,9 +21,7 @@ final class WebViewViewController: UIViewController, WebViewViewControllerProtoc
     override func viewDidLoad() {
         super.viewDidLoad()
         backButtonSetup()
-
-        // ✅ для UI-тестов
-        webView.accessibilityIdentifier = "UnsplashWebView"
+        webView.accessibilityIdentifier = A11yID.Auth.webView
 
         estimatedProgressObservation = webView.observe(
             \.estimatedProgress,
@@ -38,7 +36,7 @@ final class WebViewViewController: UIViewController, WebViewViewControllerProtoc
     }
 
     // MARK: - WebViewViewControllerProtocol
-    func load(request: URLRequest) {
+    func load(_ request: URLRequest) {
         webView.load(request)
     }
 

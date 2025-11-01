@@ -11,19 +11,19 @@ final class AuthViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // ✅ для UI-тестов
-        enterButton.accessibilityIdentifier = "Authenticate"
+        enterButton.accessibilityIdentifier = A11yID.Auth.authenticateButton
     }
 
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == ShowWebViewSegueIdentifier {
             guard let webVC = segue.destination as? WebViewViewController else {
-                fatalError("Failed to prepare for \(ShowWebViewSegueIdentifier)")
+                assertionFailure("Failed to prepare for \(ShowWebViewSegueIdentifier)")
+                return
             }
             webVC.modalPresentationStyle = .fullScreen
             webVC.delegate = self
 
-            // Wire Presenter + Helper
+
             let authHelper = AuthHelper()
             let presenter = WebViewPresenter(authHelper: authHelper)
             webVC.presenter = presenter
@@ -38,7 +38,6 @@ final class AuthViewController: UIViewController {
     }
 }
 
-// MARK: - WebViewViewControllerDelegate
 extension AuthViewController: WebViewViewControllerDelegate {
 
     func webViewViewControllerDidCancel(_ vc: WebViewViewController) {
@@ -65,7 +64,6 @@ extension AuthViewController: WebViewViewControllerDelegate {
     }
 }
 
-// MARK: - Alerts
 private extension AuthViewController {
     func showAuthErrorAlert() {
         let alert = UIAlertController(

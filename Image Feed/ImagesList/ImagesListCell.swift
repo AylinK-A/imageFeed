@@ -32,8 +32,8 @@ final class ImagesListCell: UITableViewCell {
         v.hidesWhenStopped = true
         return v
     }()
-    private var currentImageURL: String?
     
+    private var currentImageURL: String?
     private var shimmerLayers: [CALayer] = []
 
     override func awakeFromNib() {
@@ -52,8 +52,8 @@ final class ImagesListCell: UITableViewCell {
             spinner.centerYAnchor.constraint(equalTo: imageCellView.centerYAnchor)
         ])
 
-        // ✅ для UI-тестов
-        buttonCellView.accessibilityIdentifier = "LikeButton"
+        buttonCellView.accessibilityIdentifier = A11yID.Feed.likeButton
+        imageCellView.accessibilityIdentifier  = A11yID.Feed.fullImage
     }
 
     override func layoutSubviews() {
@@ -84,9 +84,7 @@ final class ImagesListCell: UITableViewCell {
             dateCellView.text = "—"
         }
 
-        let likeImage = photo.isLiked
-            ? UIImage(named: "Active")
-            : UIImage(named: "No Active")
+        let likeImage = UIImage(named: photo.isLiked ? "Active" : "No Active")
         buttonCellView.setImage(likeImage, for: .normal)
 
         imageCellView.image = UIImage(named: "Stub")
@@ -103,13 +101,14 @@ final class ImagesListCell: UITableViewCell {
             guard let self = self else { return }
             guard self.currentImageURL == expectedURL else { return }
 
-            self.imageCellView.image = image ?? UIImage(named: "Stub")
-            self.spinner.stopAnimating()
-            ShimmerHelper.removeAll(&self.shimmerLayers)
+            DispatchQueue.main.async {
+                self.imageCellView.image = image ?? UIImage(named: "Stub")
+                self.spinner.stopAnimating()
+                ShimmerHelper.removeAll(&self.shimmerLayers)
 
-            if let table = self.superview as? UITableView,
-               let indexPath = table.indexPath(for: self) {
-                table.reloadRows(at: [indexPath], with: .automatic)
+                if let table = self.superview as? UITableView,
+                   let indexPath = table.indexPath(for: self) {
+                }
             }
         }
     }

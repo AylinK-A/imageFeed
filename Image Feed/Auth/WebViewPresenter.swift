@@ -1,45 +1,54 @@
 import Foundation
 
-public protocol WebViewViewControllerProtocol: AnyObject {
-    var presenter: WebViewPresenterProtocol? { get set }
-    func load(request: URLRequest)
+protocol WebViewViewControllerProtocol: AnyObject {
+    func load(_ request: URLRequest)
     func setProgressValue(_ newValue: Float)
     func setProgressHidden(_ isHidden: Bool)
 }
 
-public protocol WebViewPresenterProtocol: AnyObject {
+protocol WebViewPresenterProtocol: AnyObject {
     var view: WebViewViewControllerProtocol? { get set }
     func viewDidLoad()
     func didUpdateProgressValue(_ newValue: Double)
+    func makeRequest() -> URLRequest?
     func code(from url: URL) -> String?
-    func shouldHideProgress(for value: Float) -> Bool
 }
 
 final class WebViewPresenter: WebViewPresenterProtocol {
     weak var view: WebViewViewControllerProtocol?
-    var authHelper: AuthHelperProtocol
+    private let authHelper: AuthHelperProtocol
 
-    init(authHelper: AuthHelperProtocol) {
+    init(authHelper: AuthHelperProtocol = AuthHelper()) {
         self.authHelper = authHelper
     }
 
     func viewDidLoad() {
-        guard let request = authHelper.authRequest() else { return }
-        view?.load(request: request)
-        didUpdateProgressValue(0)
+        view?.setProgressHidden(false)
+        if let request = makeRequest() {
+            view?.load(request)
+            updateProgress(0.0)
+        }
+    }
+
+    func makeRequest() -> URLRequest? {
+        authHelper.authURLRequest
     }
 
     func didUpdateProgressValue(_ newValue: Double) {
-        let value = Float(newValue)
-        view?.setProgressValue(value)
-        view?.setProgressHidden(shouldHideProgress(for: value))
-    }
-
-    func shouldHideProgress(for value: Float) -> Bool {
-        abs(value - 1.0) <= 0.0001
+        updateProgress(newValue)
     }
 
     func code(from url: URL) -> String? {
-        authHelper.code(from: url)
+        authHelper.getCode(from: url)
+    }
+
+    func shouldHideProgress(for value: Double) -> Bool {
+        return value >= 1.0 || value.isNaN
+    }
+
+    private func updateProgress(_ value: Double) {
+        view?.setProgressValue(Float(value))
+        view?.setProgressHidden(shouldHideProgress(for: value)) 
     }
 }
+

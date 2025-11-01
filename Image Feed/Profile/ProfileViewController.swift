@@ -64,9 +64,8 @@ final class ProfileViewController: UIViewController, ProfileViewControllerProtoc
             logoutButton.setImage(exitImage, for: .normal)
         }
         logoutButton.addTarget(self, action: #selector(logoutAction), for: .touchUpInside)
-        // ✅ для UI-тестов
-        logoutButton.accessibilityIdentifier = "Logout"
-
+        logoutButton.accessibilityIdentifier = A11yID.Profile.logout
+              
         view.addSubview(logoutButton)
         logoutButton.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -78,8 +77,7 @@ final class ProfileViewController: UIViewController, ProfileViewControllerProtoc
         nameLabel.font = UIFont(name: "SFPro-Bold", size: 23)
         nameLabel.textColor = .white
         nameLabel.text = " "
-        // ✅
-        nameLabel.accessibilityIdentifier = "ProfileName"
+        nameLabel.accessibilityIdentifier  = A11yID.Profile.name
 
         view.addSubview(nameLabel)
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -94,8 +92,7 @@ final class ProfileViewController: UIViewController, ProfileViewControllerProtoc
         loginNameLabel.font = UIFont(name: "SF Pro", size: 13)
         loginNameLabel.textColor = UIColor(red: 174/255, green: 175/255, blue: 180/255, alpha: 1)
         loginNameLabel.text = " "
-        // ✅
-        loginNameLabel.accessibilityIdentifier = "ProfileLogin"
+        loginNameLabel.accessibilityIdentifier = A11yID.Profile.login
 
         view.addSubview(loginNameLabel)
         loginNameLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -110,8 +107,7 @@ final class ProfileViewController: UIViewController, ProfileViewControllerProtoc
         descriptionLabel.font = UIFont(name: "SF Pro", size: 13)
         descriptionLabel.textColor = .white
         descriptionLabel.text = " "
-        // ✅
-        descriptionLabel.accessibilityIdentifier = "ProfileBio"
+        descriptionLabel.accessibilityIdentifier   = A11yID.Profile.bio
 
         view.addSubview(descriptionLabel)
         descriptionLabel.translatesAutoresizingMaskIntoConstraints = false

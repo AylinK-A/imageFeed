@@ -2,13 +2,15 @@
 import Foundation
 
 final class WebViewViewControllerSpy: WebViewViewControllerProtocol {
-    var presenter: WebViewPresenterProtocol?
-    var loadRequestCalled = false
-    var progressValues: [Float] = []
-    var isProgressHidden: Bool?
+    private(set) var lastLoadedRequest: URLRequest?
+    private(set) var loadRequestCalled = false
+    private(set) var progressValues: [Float] = []
+    private(set) var isProgressHiddenValues: [Bool] = []
 
-    func load(request: URLRequest) {
-        loadRequestCalled = true
+
+    func load(_ request: URLRequest) {
+        lastLoadedRequest = request
+        loadRequestCalled = true                      
     }
 
     func setProgressValue(_ newValue: Float) {
@@ -16,7 +18,7 @@ final class WebViewViewControllerSpy: WebViewViewControllerProtocol {
     }
 
     func setProgressHidden(_ isHidden: Bool) {
-        isProgressHidden = isHidden
+        isProgressHiddenValues.append(isHidden)
     }
 }
 

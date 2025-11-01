@@ -7,29 +7,21 @@ struct AuthConfiguration {
     let accessScope: String
     let defaultBaseURL: URL
     let authURLString: String
+}
 
-    init(accessKey: String,
-         secretKey: String,
-         redirectURI: String,
-         accessScope: String,
-         authURLString: String,
-         defaultBaseURL: URL) {
-        self.accessKey = accessKey
-        self.secretKey = secretKey
-        self.redirectURI = redirectURI
-        self.accessScope = accessScope
-        self.defaultBaseURL = defaultBaseURL
-        self.authURLString = authURLString
-    }
-
+extension AuthConfiguration {
     static var standard: AuthConfiguration {
-        AuthConfiguration(
+        guard let baseURL = URL(string: Constants.baseAPIURLString) else {
+            preconditionFailure("Invalid baseAPIURLString in Constants")
+        }
+
+        return AuthConfiguration(
             accessKey: Constants.accessKey,
             secretKey: Constants.secretKey,
             redirectURI: Constants.redirectURI,
             accessScope: Constants.accessScope,
-            authURLString: "https://unsplash.com/oauth/authorize",
-            defaultBaseURL: URL(string: Constants.baseAPIURLString)! // у тебя уже есть baseAPIURLString в Constants.swift
+            defaultBaseURL: baseURL,
+            authURLString: "https://unsplash.com/oauth/authorize"
         )
     }
 }

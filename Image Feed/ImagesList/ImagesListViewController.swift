@@ -19,8 +19,7 @@ final class ImagesListViewController: UIViewController, ImagesListViewProtocol {
         tableView.estimatedRowHeight = 300
         tableView.contentInset = UIEdgeInsets(top: 12, left: 0, bottom: 12, right: 0)
 
-        // ✅ для UI-тестов
-        tableView.accessibilityIdentifier = "ImagesTable"
+        tableView.accessibilityIdentifier = A11yID.Feed.table
 
         presenter?.viewDidLoad()
     }

@@ -1,7 +1,5 @@
 import Foundation
-import UIKit
 
-// MARK: - View
 protocol ImagesListViewProtocol: AnyObject {
     var presenter: ImagesListPresenterProtocol? { get set }
     func reloadRows(at indexPaths: [IndexPath])
@@ -10,7 +8,6 @@ protocol ImagesListViewProtocol: AnyObject {
     func showLikeError()
 }
 
-// MARK: - Presenter
 protocol ImagesListPresenterProtocol: AnyObject {
     var view: ImagesListViewProtocol? { get set }
     var numberOfRows: Int { get }
@@ -20,7 +17,6 @@ protocol ImagesListPresenterProtocol: AnyObject {
     func toggleLike(at indexPath: IndexPath)
 }
 
-// MARK: - Dependency abstraction
 protocol ImagesProviding: AnyObject {
     var photos: [Photo] { get }
     func fetchPhotosNextPage()
@@ -87,7 +83,7 @@ final class ImagesListPresenter: ImagesListPresenterProtocol {
         }
     }
 
-    // MARK: - Private
+
     private func handlePhotosUpdate(_ note: Notification) {
         let newCount = service.photos.count
 

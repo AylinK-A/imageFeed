@@ -18,7 +18,7 @@ final class SingleImageViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        imageView.accessibilityIdentifier = "SingleImageView"
+        imageView.accessibilityIdentifier = A11yID.Feed.fullImage
 
         imageView.image = nil
 
