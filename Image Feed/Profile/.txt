@@ -1,0 +1,6 @@
+import Foundation
+
+// Подписываем реальные сервисы на абстракции, которые ждёт презентер
+extension ProfileService: ProfileProviding {}
+extension ProfileImageService: ProfileImageProviding {}
+extension ProfileLogoutService: ProfileLoggingOut {}

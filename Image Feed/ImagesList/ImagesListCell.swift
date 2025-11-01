@@ -32,9 +32,8 @@ final class ImagesListCell: UITableViewCell {
         v.hidesWhenStopped = true
         return v
     }()
-    private var currentImageURL: String?
     
-    // ⬇️ Шимиринг для ячейки
+    private var currentImageURL: String?
     private var shimmerLayers: [CALayer] = []
 
     override func awakeFromNib() {
@@ -52,6 +51,9 @@ final class ImagesListCell: UITableViewCell {
             spinner.centerXAnchor.constraint(equalTo: imageCellView.centerXAnchor),
             spinner.centerYAnchor.constraint(equalTo: imageCellView.centerYAnchor)
         ])
+
+        buttonCellView.accessibilityIdentifier = A11yID.Feed.likeButton
+        imageCellView.accessibilityIdentifier  = A11yID.Feed.fullImage
     }
 
     override func layoutSubviews() {
@@ -72,8 +74,6 @@ final class ImagesListCell: UITableViewCell {
         dateCellView.text = nil
         spinner.stopAnimating()
         buttonCellView.isEnabled = true
-        
-        // Снимаем анимации шимиринга
         ShimmerHelper.removeAll(&shimmerLayers)
     }
 
@@ -84,15 +84,12 @@ final class ImagesListCell: UITableViewCell {
             dateCellView.text = "—"
         }
 
-        let likeImage = photo.isLiked
-            ? UIImage(named: "Active")
-            : UIImage(named: "No Active")
+        let likeImage = UIImage(named: photo.isLiked ? "Active" : "No Active")
         buttonCellView.setImage(likeImage, for: .normal)
 
         imageCellView.image = UIImage(named: "Stub")
         spinner.startAnimating()
 
-        // ⬇️ Шимиринг на картинке (радиус 12 — аккуратные скругления)
         ShimmerHelper.removeAll(&shimmerLayers)
         let shimmer = ShimmerHelper.add(to: imageCellView, cornerRadius: 12)
         shimmerLayers.append(shimmer)
@@ -104,16 +101,14 @@ final class ImagesListCell: UITableViewCell {
             guard let self = self else { return }
             guard self.currentImageURL == expectedURL else { return }
 
-            self.imageCellView.image = image ?? UIImage(named: "Stub")
-            self.spinner.stopAnimating()
-            
-            // ❗️контент готов — убираем шимиринг
-            ShimmerHelper.removeAll(&self.shimmerLayers)
+            DispatchQueue.main.async {
+                self.imageCellView.image = image ?? UIImage(named: "Stub")
+                self.spinner.stopAnimating()
+                ShimmerHelper.removeAll(&self.shimmerLayers)
 
-            // Если высота изменилась — перерисуем строку
-            if let table = self.superview as? UITableView,
-               let indexPath = table.indexPath(for: self) {
-                table.reloadRows(at: [indexPath], with: .automatic)
+                if let table = self.superview as? UITableView,
+                   let indexPath = table.indexPath(for: self) {
+                }
             }
         }
     }

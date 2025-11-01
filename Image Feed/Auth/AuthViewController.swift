@@ -5,18 +5,29 @@ final class AuthViewController: UIViewController {
     private let ShowWebViewSegueIdentifier = "ShowWebView"
     private let oauth2Service = OAuth2Service.shared
     private let oauth2TokenStorage = OAuth2TokenStorage()
-    private let webViewViewController = WebViewViewController()
 
     weak var delegate: AuthViewControllerDelegate?
     @IBOutlet weak var enterButton: UIButton!
 
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        enterButton.accessibilityIdentifier = A11yID.Auth.authenticateButton
+    }
+
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == ShowWebViewSegueIdentifier {
             guard let webVC = segue.destination as? WebViewViewController else {
-                fatalError("Failed to prepare for \(ShowWebViewSegueIdentifier)")
+                assertionFailure("Failed to prepare for \(ShowWebViewSegueIdentifier)")
+                return
             }
             webVC.modalPresentationStyle = .fullScreen
             webVC.delegate = self
+
+
+            let authHelper = AuthHelper()
+            let presenter = WebViewPresenter(authHelper: authHelper)
+            webVC.presenter = presenter
+            presenter.view = webVC
         } else {
             super.prepare(for: segue, sender: sender)
         }
@@ -27,7 +38,6 @@ final class AuthViewController: UIViewController {
     }
 }
 
-// MARK: - WebViewViewControllerDelegate
 extension AuthViewController: WebViewViewControllerDelegate {
 
     func webViewViewControllerDidCancel(_ vc: WebViewViewController) {
@@ -54,7 +64,6 @@ extension AuthViewController: WebViewViewControllerDelegate {
     }
 }
 
-// MARK: - Alerts
 private extension AuthViewController {
     func showAuthErrorAlert() {
         let alert = UIAlertController(
