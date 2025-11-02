@@ -16,9 +16,8 @@ final class OAuth2Service {
     private let oauth2Storage = OAuth2TokenStorage()
 
     private init() {}
-    
+
     private func createURLRequest(_ code: String) -> URLRequest? {
-        
         guard var urlComponents = URLComponents(string: Constants.finalURLString) else {
             debugPrint("Error in creating URL string for authorization request: createURLRequest -> OAuth2Service")
             return nil
@@ -38,30 +37,36 @@ final class OAuth2Service {
         request.httpMethod = "POST"
         return request
     }
-    
-    
-    func fetchOAuthToken(code: String, handler: @escaping (Result<String, Error>) -> Void) {
 
+    /// Получаем OAuth-токен и кладём его в `OAuth2TokenStorage`
+    func fetchOAuthToken(code: String, handler: @escaping (Result<String, Error>) -> Void) {
         assert(Thread.isMainThread)
-        
+
         guard lastCode != code else {
             handler(.failure(AuthServiceError.invalidRequest))
             return
         }
+
         task?.cancel()
         self.lastCode = code
+
         guard let request = createURLRequest(code) else {
             handler(.failure(AuthServiceError.invalidRequest))
             return
         }
-        
+
         let task = urlSession.objectTask(for: request) { [weak self] (result: Result<OAuthTokenResponseBody, Error> ) in
             guard let self else { return }
             switch result {
             case .success(let info):
-                guard let token = info.access_token else { return }
-                oauth2Storage.token = token
+                guard let token = info.access_token else {
+                    self.lastCode = nil
+                    handler(.failure(AuthServiceError.invalidRequest))
+                    return
+                }
+                self.oauth2Storage.token = token
                 handler(.success(token))
+
             case .failure(let error):
                 debugPrint("Cannot receive token: fetchOAuthToken -> OAuth2Service")
                 handler(.failure(error))
@@ -70,10 +75,9 @@ final class OAuth2Service {
             self.lastCode = nil
             self.task = nil
         }
-        
+
         self.task = task
         task.resume()
     }
-    
 }
 

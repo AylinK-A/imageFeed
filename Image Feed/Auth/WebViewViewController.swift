@@ -1,5 +1,5 @@
 import UIKit
-@preconcurrency import WebKit
+import WebKit
 
 final class WebViewViewController: UIViewController, WebViewViewControllerProtocol {
 
@@ -8,26 +8,26 @@ final class WebViewViewController: UIViewController, WebViewViewControllerProtoc
 
     // MARK: - Delegates
     weak var delegate: WebViewViewControllerDelegate?
-    weak var delegateSplashVC: SplashViewController?
 
     // MARK: - UI
     @IBOutlet private weak var webView: WKWebView!
     @IBOutlet private weak var progressView: UIProgressView!
-    let backButton = UIButton()
+    private let backButton = UIButton()
 
     private var estimatedProgressObservation: NSKeyValueObservation?
 
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        backButtonSetup()
-        webView.accessibilityIdentifier = A11yID.Auth.webView
 
+        setupBackButton()
+
+        webView.accessibilityIdentifier = A11yID.Auth.webView
         estimatedProgressObservation = webView.observe(
             \.estimatedProgress,
             options: [],
             changeHandler: { [weak self] _, _ in
-                guard let self = self else { return }
+                guard let self else { return }
                 self.presenter?.didUpdateProgressValue(self.webView.estimatedProgress)
             })
 
@@ -49,16 +49,18 @@ final class WebViewViewController: UIViewController, WebViewViewControllerProtoc
     }
 
     // MARK: - UI
-    func backButtonSetup() {
-        let buttonImage = UIImage(named: "nav_back_button")
-        backButton.setImage(buttonImage, for: .normal)
+    private func setupBackButton() {
+        let image = UIImage(named: "nav_back_button")
+        backButton.setImage(image, for: .normal)
         backButton.addTarget(self, action: #selector(tapBackButton), for: .touchUpInside)
         view.addSubview(backButton)
         backButton.translatesAutoresizingMaskIntoConstraints = false
-        backButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 9).isActive = true
-        backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 9).isActive = true
-        backButton.heightAnchor.constraint(equalToConstant: 44).isActive = true
-        backButton.widthAnchor.constraint(equalToConstant: 44).isActive = true
+        NSLayoutConstraint.activate([
+            backButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 9),
+            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 9),
+            backButton.heightAnchor.constraint(equalToConstant: 44),
+            backButton.widthAnchor.constraint(equalToConstant: 44)
+        ])
     }
 
     @objc private func tapBackButton() {
@@ -73,19 +75,13 @@ extension WebViewViewController: WKNavigationDelegate {
         decidePolicyFor navigationAction: WKNavigationAction,
         decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
     ) {
-        if let code = code(from: navigationAction) {
+        if let url = navigationAction.request.url,
+           let code = presenter?.code(from: url) {
             delegate?.webViewViewController(self, didAuthenticateWithCode: code)
             decisionHandler(.cancel)
         } else {
             decisionHandler(.allow)
         }
-    }
-
-    private func code(from navigationAction: WKNavigationAction) -> String? {
-        if let url = navigationAction.request.url {
-            return presenter?.code(from: url)
-        }
-        return nil
     }
 }
 

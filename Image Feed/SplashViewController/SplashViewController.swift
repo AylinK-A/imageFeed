@@ -1,5 +1,4 @@
 import UIKit
-import SwiftKeychainWrapper
 import WebKit
 
 final class SplashViewController: UIViewController {
@@ -15,12 +14,10 @@ final class SplashViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
 
-        // ⬇️ Режим UI-тестов: принудительно начинаем с экрана авторизации
-        if ProcessInfo.processInfo.arguments.contains("-ResetAuth") {
-            // 1) Сносим токен
-            oauth2TokenStorage.removeAllTokensForUITests()
+        if presentedViewController != nil { return }
 
-            // 2) Чистим cookies/LocalStorage у WKWebView, чтобы Unsplash снова показал форму логина
+        if ProcessInfo.processInfo.arguments.contains("-ResetAuth") {
+            oauth2TokenStorage.removeAllTokensForUITests()
             WKWebsiteDataStore.default().fetchDataRecords(ofTypes: WKWebsiteDataStore.allWebsiteDataTypes()) { records in
                 WKWebsiteDataStore.default().removeData(
                     ofTypes: WKWebsiteDataStore.allWebsiteDataTypes(),
@@ -28,7 +25,6 @@ final class SplashViewController: UIViewController {
                     completionHandler: {}
                 )
             }
-            // Дальше обычная логика — токена нет → показать экран авторизации
         }
 
         if let token = oauth2TokenStorage.token, !token.isEmpty {
@@ -41,7 +37,7 @@ final class SplashViewController: UIViewController {
     // MARK: - UI setup
 
     private func setupSplashVC() {
-        view.backgroundColor = .ypBlack
+        view.backgroundColor = .black
         let logoImageView = UIImageView(image: UIImage(named: "Logo_of_Unsplash"))
         logoImageView.backgroundColor = .clear
         logoImageView.translatesAutoresizingMaskIntoConstraints = false
@@ -70,14 +66,20 @@ final class SplashViewController: UIViewController {
     }
 
     private func switchToTabBarViewController() {
-        guard let window = UIApplication.shared.windows.first else {
-            assertionFailure("Invalid window configuration")
-            return
-        }
-
         let tabBarController = TabBarController()
         tabBarController.awakeFromNib()
-        window.rootViewController = tabBarController
+
+        if let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first(where: { $0.activationState == .foregroundActive }),
+           let window = scene.windows.first {
+            window.rootViewController = tabBarController
+            window.makeKeyAndVisible()
+            UIView.transition(with: window, duration: 0.25, options: .transitionCrossDissolve, animations: nil)
+        } else if let window = UIApplication.shared.windows.first {
+            window.rootViewController = tabBarController
+            window.makeKeyAndVisible()
+        }
     }
 
     // MARK: - Profile loading
@@ -85,42 +87,38 @@ final class SplashViewController: UIViewController {
     private func fetchProfileAndProceed(with token: String) {
         UIBlockingProgressHUD.show()
         profileService.fetchProfile(token) { [weak self] result in
-            guard let self = self else { return }
+            guard let self else { return }
             UIBlockingProgressHUD.dismiss()
 
             switch result {
             case .success:
-                guard let username = self.profileService.profile?.username else {
-                    debugPrint("[SplashViewController]: profile.username is nil")
-                    self.switchToTabBarViewController()
-                    return
+                if let username = self.profileService.profile?.username {
+                    self.profileImageService.fetchProfileImageURL(username: username) { _ in }
                 }
-
-                self.profileImageService.fetchProfileImageURL(username: username) { _ in }
-
                 DispatchQueue.main.async {
                     self.switchToTabBarViewController()
                 }
 
             case .failure(let error):
+                // КЛЮЧЕВОЕ ИЗМЕНЕНИЕ:
+                // Если есть токен, но профиль не загрузился — НЕ возвращаем на авторизацию.
+                // Идём в основной поток (лента), профиль подгрузится/почините отдельно.
                 debugPrint("[SplashViewController.fetchProfile]: \(error.localizedDescription)")
-                self.switchToAuthViewController()
+                DispatchQueue.main.async {
+                    self.switchToTabBarViewController()
+                }
             }
         }
     }
 }
 
 // MARK: - AuthViewControllerDelegate
-
 extension SplashViewController: AuthViewControllerDelegate {
     func didAuthenticate(_ vc: AuthViewController, success: Bool) {
-        vc.dismiss(animated: true) { [weak self] in
-            guard let self = self else { return }
-            if success, let token = self.oauth2TokenStorage.token {
-                self.fetchProfileAndProceed(with: token)
-            } else {
-                self.switchToAuthViewController()
-            }
+        if success, let token = self.oauth2TokenStorage.token {
+            self.fetchProfileAndProceed(with: token)
+        } else {
+            self.switchToAuthViewController()
         }
     }
 }

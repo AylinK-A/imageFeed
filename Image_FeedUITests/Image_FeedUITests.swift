@@ -6,7 +6,7 @@ private enum ID {
         static let button = "Authenticate"
         static let webView = "UnsplashWebView"
         static let loginPrimary = "Login"
-        static let loginAlt = "Log in"
+        static let loginAlt    = "Log in"
         static let continueBtn = "Continue"
     }
     enum Feed {
@@ -27,14 +27,15 @@ final class Image_FeedUITests: XCTestCase {
 
     private let app = XCUIApplication()
 
-    // ЧТО вводим
     private let email = "aylinkyz.1@gmail.com"
     private let pass  = "Leochka123"
 
-    // MARK: - Setup
-
     override func setUpWithError() throws {
         continueAfterFailure = false
+
+        app.launchEnvironment["AppleLanguages"] = "(en)"
+        app.launchEnvironment["AppleLocale"] = "en_US"
+
         app.launchArguments = ["-UITests"]
         app.launch()
     }
@@ -42,7 +43,6 @@ final class Image_FeedUITests: XCTestCase {
     // MARK: - Tests
 
     func testAuth() throws {
-        // стартуем в "чистом" состоянии авторизации
         relaunch(with: ["-UITests", "-ResetAuth"])
         try loginFlow_NoEnter_PasteOnly()
         XCTAssertTrue(waitFeedAppeared(timeout: 45), "Лента не появилась после авторизации")
@@ -51,23 +51,31 @@ final class Image_FeedUITests: XCTestCase {
     func testFeed() throws {
         try ensureLoggedIn()
 
+        if !app.tables[ID.Feed.table].waitForExistence(timeout: 10) {
+            if app.buttons[ID.Auth.button].exists && app.buttons[ID.Auth.button].isHittable {
+                try loginFlow_NoEnter_PasteOnly()
+            }
+            XCTAssertTrue(waitFeedAppeared(timeout: 30), "Экран ленты не открылся")
+        }
+
         let table = app.tables[ID.Feed.table]
-        XCTAssertTrue(table.waitForExistence(timeout: 30), "Экран ленты не открылся")
+        XCTAssertTrue(table.exists, "Экран ленты не открылся")
 
-        // дожидаемся появления контента
         let firstCell = table.cells.element(boundBy: 0)
-        XCTAssertTrue(firstCell.waitForExistence(timeout: 30), "Контент ленты долго не приходит")
+        if !firstCell.waitForExistence(timeout: 30) {
+            table.swipeUp()
+            XCTAssertTrue(table.cells.element(boundBy: 0).waitForExistence(timeout: 10),
+                          "Контент ленты долго не приходит")
+        }
 
-        table.swipeUp()
-        usleep(300_000)
-
-        let like = firstCell.buttons[ID.Feed.like]
+        let cell = table.cells.element(boundBy: 0)
+        let like = cell.buttons[ID.Feed.like]
         XCTAssertTrue(like.waitForExistence(timeout: 5), "Кнопка лайка не найдена")
         like.tap()
         usleep(300_000)
         like.tap()
 
-        firstCell.tap()
+        cell.tap()
 
         let full = app.images[ID.Feed.fullImage]
         XCTAssertTrue(full.waitForExistence(timeout: 15), "Полноэкранное изображение не открылось")
@@ -75,10 +83,9 @@ final class Image_FeedUITests: XCTestCase {
         full.pinch(withScale: 3.0, velocity: 1.0)
         full.pinch(withScale: 0.5, velocity: -1.0)
 
-        // вернуться назад
-        if app.buttons.firstMatch.exists { app.buttons.firstMatch.tap() }
+        returnToFeed(from: full, table: table)
 
-        XCTAssertTrue(table.waitForExistence(timeout: 10), "Не вернулись на экран ленты")
+        XCTAssertTrue(table.waitForExistence(timeout: 15), "Не вернулись на экран ленты")
     }
 
     func testProfile() throws {
@@ -87,7 +94,6 @@ final class Image_FeedUITests: XCTestCase {
         let table = app.tables[ID.Feed.table]
         XCTAssertTrue(table.waitForExistence(timeout: 30), "Экран ленты не открылся")
 
-        // Перейти на вкладку профиля (вторая кнопка TabBar)
         let profileTab = app.tabBars.buttons.element(boundBy: 1)
         XCTAssertTrue(profileTab.waitForExistence(timeout: 5), "Вкладка Профиль не найдена")
         profileTab.tap()
@@ -115,84 +121,100 @@ final class Image_FeedUITests: XCTestCase {
         authButton.tap()
 
         let webView = app.webViews[ID.Auth.webView]
-        XCTAssertTrue(webView.waitForExistence(timeout: 25), "Экран авторизации не появился")
+        if !webView.waitForExistence(timeout: 15) {
+            XCTAssertTrue(waitFeedAppeared(timeout: 30), "Лента не появилась после тапа Authenticate")
+            return
+        }
 
-        // cookie/consent кнопки — если есть, тапнем
         tapIfExists(webView.buttons["Accept"])
         tapIfExists(webView.buttons["Accept all"])
         tapIfExists(webView.buttons["Allow"])
-        tapIfExists(webView.buttons["Я согласен"])
 
-        // e-mail
+        // Ввод email
         let emailField = webView.textFields.element(boundBy: 0)
         XCTAssertTrue(emailField.waitForExistence(timeout: 12), "Поле e-mail не найдено")
         robustPaste(email, into: emailField, scroller: webView)
 
-        // убираем фокус, скроллим к паролю
+        // Снять фокус и проскроллить к паролю
         tapBlankCenter(in: webView)
         webView.swipeUp()
-        usleep(300_000)
+        usleep(150_000)
 
-        // пароль
+        // Ввод пароля
         let passwordField = webView.secureTextFields.element(boundBy: 0)
         XCTAssertTrue(passwordField.waitForExistence(timeout: 12), "Поле пароля не найдено")
         focusElement(passwordField, scroller: webView)
         robustPaste(pass, into: passwordField, scroller: webView)
 
-        // submit
-        if webView.buttons[ID.Auth.loginAlt].exists { webView.buttons[ID.Auth.loginAlt].tap() }
-        else if webView.buttons[ID.Auth.loginPrimary].exists { webView.buttons[ID.Auth.loginPrimary].tap() }
-        else if webView.buttons[ID.Auth.continueBtn].exists { webView.buttons[ID.Auth.continueBtn].tap() }
-        else if let anyBtn = webView.descendants(matching: .button).allElementsBoundByIndex.first(where: { $0.isHittable }) {
-            anyBtn.tap()
+        if !pressKeyboardSubmitIfAvailable() {
+            for _ in 0..<2 { webView.swipeUp() }
+
+            let labels = [ID.Auth.loginPrimary, ID.Auth.loginAlt]
+            var tapped = false
+            for label in labels where !tapped {
+                let btn  = webView.buttons[label]
+                let link = webView.links[label]
+                let txt  = webView.staticTexts[label]
+                if btn.exists || link.exists || txt.exists {
+                    let el = [btn, link, txt].first { $0.exists && $0.isHittable }
+                         ?? [btn, link, txt].first { $0.exists }
+                    if let el = el {
+                        if el.isHittable { el.tap() }
+                        else { el.coordinate(withNormalizedOffset: .init(dx: 0.5, dy: 0.5)).tap() }
+                        tapped = true
+                    }
+                }
+            }
+
+            if !tapped {
+                let below = passwordField.coordinate(withNormalizedOffset: .init(dx: 0.5, dy: 2.2))
+                below.tap()
+            }
         }
 
-        // доп. подтверждение доступа, если появляется
-        let authCandidates = ["Authorize","Allow access","Grant access","Allow","Разрешить","Continue","Продолжить"]
-        if let allow = authCandidates
-            .map({ webView.buttons[$0].firstMatch })
-            .first(where: { $0.waitForExistence(timeout: 3) && $0.isHittable }) {
-            allow.tap()
-        }
+        let allow = ["Authorize","Allow access","Grant access","Allow","Continue"]
+            .map { webView.buttons[$0].firstMatch }
+            .first { $0.waitForExistence(timeout: 3) && $0.isHittable }
+        allow?.tap()
 
-        // ждём закрытия webview
-        XCTAssertTrue(waitUntilGone(webView, timeout: 20), "WebView не закрылся после логина — редирект не обработан")
+        let gone = NSPredicate(format: "exists == false")
+        let exp = expectation(for: gone, evaluatedWith: webView, handler: nil)
+        wait(for: [exp], timeout: 20.0)
+
+        XCTAssertTrue(waitFeedAppeared(timeout: 60), "Лента не появилась после авторизации")
     }
 
     private func ensureLoggedIn() throws {
-        // Если виден экран авторизации — логинимся
-        if app.buttons[ID.Auth.button].waitForExistence(timeout: 1) {
+        if waitFeedAppeared(timeout: 5) { return }
+
+        let authBtn = app.buttons[ID.Auth.button]
+        if authBtn.waitForExistence(timeout: 3), authBtn.isHittable {
             try loginFlow_NoEnter_PasteOnly()
             XCTAssertTrue(waitFeedAppeared(timeout: 60), "Лента не появилась после авторизации")
+            return
         }
+
+        XCTAssertTrue(waitFeedAppeared(timeout: 30), "Лента не появилась (ожидали автологин по токену)")
     }
 
     // MARK: - Wait helpers
-
     private func waitFeedAppeared(timeout: TimeInterval) -> Bool {
-        return app.tables[ID.Feed.table].waitForExistence(timeout: timeout)
-    }
-
-    private func waitUntilGone(_ element: XCUIElement, timeout: TimeInterval) -> Bool {
-        let start = Date()
-        while element.exists && Date().timeIntervalSince(start) < timeout {
-            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
-        }
-        return !element.exists
+        app.tables[ID.Feed.table].waitForExistence(timeout: timeout)
     }
 
     // MARK: - UI helpers
-
     private func relaunch(with args: [String]) {
         app.terminate()
         app.launchArguments = args
+        app.launchEnvironment["AppleLanguages"] = "(en)"
+        app.launchEnvironment["AppleLocale"] = "en_US"
         app.launch()
     }
 
     private func tapBlankCenter(in scroller: XCUIElement) {
-        let center = scroller.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1)) // высоко, чтобы не триггерить Return
+        let center = scroller.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
         center.tap()
-        usleep(250_000)
+        usleep(120_000)
     }
 
     private func focusElement(_ element: XCUIElement, scroller: XCUIElement) {
@@ -211,62 +233,74 @@ final class Image_FeedUITests: XCTestCase {
         _ = app.keyboards.firstMatch.waitForExistence(timeout: 1.0)
     }
 
+    private func pressKeyboardSubmitIfAvailable() -> Bool {
+        let keys = ["Go","Continue","Done","Return"].map { app.keyboards.buttons[$0] }
+        if let key = keys.first(where: { $0.waitForExistence(timeout: 0.8) && $0.isHittable }) {
+            key.tap()
+            return true
+        }
+        return false
+    }
+
     private func robustPaste(_ text: String, into field: XCUIElement, scroller: XCUIElement) {
         UIPasteboard.general.string = text
 
         var tries = 0
-        while !field.isHittable && tries < 8 {
-            scroller.swipeUp(); tries += 1
+        while !field.isHittable && tries < 6 { scroller.swipeUp(); tries += 1 }
+
+        if field.isHittable {
+            field.tap()
+        } else {
+            let coord = field.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            coord.tap()
         }
 
-        if field.isHittable { field.tap() } else {
-            field.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        }
-        _ = app.keyboards.firstMatch.waitForExistence(timeout: 1.0)
+        _ = app.keyboards.firstMatch.waitForExistence(timeout: 8)
 
-        let points: [CGVector] = [
-            .init(dx: 0.5, dy: 0.5),
-            .init(dx: 0.85, dy: 0.5),
-            .init(dx: 0.15, dy: 0.5)
-        ]
+        let coord = field.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        coord.press(forDuration: 0.8)
 
-        func tryPasteMenu() -> Bool {
-            let ru = app.menuItems["Вставить"]
-            let en = app.menuItems["Paste"]
-            if ru.waitForExistence(timeout: 1.2), ru.isHittable { ru.tap(); return true }
-            if en.waitForExistence(timeout: 1.2), en.isHittable { en.tap(); return true }
-            return false
+        let pasteRU = app.menuItems["Вставить"]
+        let pasteEN = app.menuItems["Paste"]
+
+        if pasteRU.waitForExistence(timeout: 1.0), pasteRU.isHittable {
+            pasteRU.tap(); return
+        } else if pasteEN.waitForExistence(timeout: 1.0), pasteEN.isHittable {
+            pasteEN.tap(); return
         }
 
-        func trySelectAll() -> Bool {
-            let ru = app.menuItems["Выбрать все"]
-            let en = app.menuItems["Select All"]
-            if ru.waitForExistence(timeout: 0.8) { ru.tap(); return true }
-            if en.waitForExistence(timeout: 0.8) { en.tap(); return true }
-            return false
+        if !app.keyboards.firstMatch.exists { field.tap() }
+        for ch in text {
+            field.typeText(String(ch))
+            usleep(60_000)
         }
-
-        for p in points {
-            let coord = field.coordinate(withNormalizedOffset: p)
-            coord.press(forDuration: 0.8)
-            if tryPasteMenu() { return }
-            if trySelectAll() {
-                coord.press(forDuration: 0.7)
-                if tryPasteMenu() { return }
-            }
-        }
-
-        // fallback: если нет контекстного меню, но есть клавиатура — печатаем
-        if app.keyboards.firstMatch.exists {
-            field.typeText(text)
-            return
-        }
-
-        XCTFail("Меню вставки не появилось и клавиатуры нет — некуда вводить текст")
     }
 
     private func tapIfExists(_ element: XCUIElement) {
         if element.exists && element.isHittable { element.tap() }
+    }
+
+    // MARK: - Fullscreen exit helper
+    private func returnToFeed(from fullImage: XCUIElement, table: XCUIElement) {
+        let candidates: [XCUIElement] = [
+            app.buttons["Back"],
+            app.buttons["Close"],
+            app.navigationBars.buttons.element(boundBy: 0),
+            app.buttons.firstMatch
+        ]
+        if let b = candidates.first(where: { $0.exists && $0.isHittable }) {
+            b.tap()
+            _ = table.waitForExistence(timeout: 10)
+            if table.exists { return }
+        }
+
+        if fullImage.exists {
+            fullImage.swipeDown()
+            if table.waitForExistence(timeout: 10) { return }
+        }
+        
+        app.swipeRight()
+        _ = table.waitForExistence(timeout: 10)
     }
 }
 

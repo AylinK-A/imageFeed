@@ -67,7 +67,6 @@ final class ImagesListViewController: UIViewController, ImagesListViewProtocol {
     }
 }
 
-// MARK: - UITableViewDataSource / Delegate (без изменений ниже)
 extension ImagesListViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         presenter?.numberOfRows ?? 0
