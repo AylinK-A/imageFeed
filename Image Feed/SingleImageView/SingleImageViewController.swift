@@ -1,5 +1,6 @@
 import UIKit
 
+@MainActor
 final class SingleImageViewController: UIViewController {
 
     var imageURL: URL?
@@ -16,6 +17,8 @@ final class SingleImageViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+
+        imageView.accessibilityIdentifier = A11yID.Feed.fullImage
 
         imageView.image = nil
 
@@ -141,7 +144,7 @@ final class SingleImageViewController: UIViewController {
     }
 }
 
-// MARK: - UIScrollViewDelegate
+@MainActor
 extension SingleImageViewController: UIScrollViewDelegate {
     func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
     func scrollViewDidZoom(_ scrollView: UIScrollView) { centerViaInsets() }
